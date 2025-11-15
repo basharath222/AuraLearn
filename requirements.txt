@@ -1,0 +1,14 @@
+streamlit
+opencv-python
+deepface
+langchain
+pypdf2
+firebase-admin
+chromadb
+python-dotenv
+openai
+pyrebase4
+pdfplumber
+google-auth 
+google-auth-oauthlib 
+google-auth-httplib2
