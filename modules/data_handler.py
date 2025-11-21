@@ -1,29 +1,40 @@
-# modules/data_handler.py
+import pyrebase
 import json
 import os
+import streamlit as st
 from datetime import datetime
 
-DB_FILE = "user_progress.json"
+CONFIG_PATH = "config/firebase_config.json"
 
-def load_history():
-    if not os.path.exists(DB_FILE):
-        return []
-    try:
-        with open(DB_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return []
+def get_firebase():
+    if not os.path.exists(CONFIG_PATH):
+        return None
+    with open(CONFIG_PATH) as f:
+        config = json.load(f)
+    return pyrebase.initialize_app(config)
 
-def save_result(score, total, mood):
-    history = load_history()
-    entry = {
+def save_result_to_cloud(user_id, score, total, mood):
+    firebase = get_firebase()
+    if not firebase: return
+    db = firebase.database()
+    data = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "score": score,
         "total": total,
         "mood": mood,
         "percentage": round((score/total)*100, 1)
     }
-    history.append(entry)
-    with open(DB_FILE, "w") as f:
-        json.dump(history, f, indent=4)
-    return history
+    # Push to Firebase Realtime Database
+    db.child("users").child(user_id).child("history").push(data)
+
+def load_history_from_cloud(user_id):
+    firebase = get_firebase()
+    if not firebase: return []
+    db = firebase.database()
+    try:
+        history = db.child("users").child(user_id).child("history").get()
+        if history.val():
+            return list(history.val().values())
+        return []
+    except:
+        return []
