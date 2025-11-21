@@ -30,11 +30,11 @@ def inject_css():
 
     st.markdown(f"""
     <style>
-        /* FORCE DARK MODE */
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
         
-        /* GLOBAL BUTTONS */
-        .stButton>button, div[data-testid="stForm"] button {{
+        /* --- GLOBAL BUTTONS --- */
+        /* We use a very specific selector to target ONLY standard buttons, not icons */
+        .stButton > button {{
             background: {aura_gradient} !important;
             color: white !important;
             border: none !important;
@@ -45,54 +45,55 @@ def inject_css():
             transition: 0.3s;
             box-shadow: 0 4px 15px rgba(159, 90, 240, 0.3);
         }}
-        .stButton>button:hover, div[data-testid="stForm"] button:hover {{ 
+        .stButton > button:hover {{ 
             transform: scale(1.02); 
             box-shadow: 0 6px 20px rgba(159, 90, 240, 0.6);
         }}
-        
-        /* FIX PASSWORD EYE (Make Transparent) */
+
+        /* --- FIX PASSWORD EYE ICON --- */
+        /* Force the eye button to be transparent */
         button[aria-label="Show password"] {{
-            background: transparent !important;
+            background-color: transparent !important;
             border: none !important;
+            color: inherit !important;
             box-shadow: none !important;
         }}
+        button[aria-label="Show password"]:hover {{
+            background-color: transparent !important;
+        }}
 
-        /* EMOTION BUTTONS */
-        div[data-testid="column"] .stButton>button {{
+        /* --- EMOTION BUTTONS --- */
+        div[data-testid="column"] .stButton > button {{
             background: #181825 !important; 
             color: #e0e0e0 !important; 
             border: 1px solid #3cd7f6 !important;
             height: 60px !important;
             box-shadow: none !important;
         }}
-        div[data-testid="column"] .stButton>button:hover {{
+        div[data-testid="column"] .stButton > button:hover {{
             background: {aura_gradient} !important;
             border: none !important;
             color: white !important;
         }}
         
-        /* TUTOR MESSAGE BOX */
+        /* UI CARDS */
         .tutor-box {{
             background: #13131f; padding: 20px; border-radius: 15px;
             border-left: 5px solid #3cd7f6; margin: 20px 0;
             animation: fadeIn 0.5s; color: #e0e0e0;
         }}
-        
-        /* BOOST CARD */
         .boost-card {{ 
             background: linear-gradient(135deg, #2e1a47 0%, #4a1c40 100%);
             padding: 25px; border-radius: 15px;
             border: 2px solid #ff6ac6; color: white; margin: 20px 0;
         }}
-
-        /* AI RESPONSE */
         .ai-response {{
             background-color: #1e1e2e; padding: 20px; border-radius: 12px;
             border-left: 5px solid #9f5af0; margin-top: 20px; color: white;
         }}
 
-        /* TEXT INPUT */
-        .stTextInput>div>div>input {{
+        /* INPUT FIELDS */
+        .stTextInput > div > div > input {{
             background-color: #181825 !important; color: white !important; border-radius: 10px; border: 1px solid #555;
         }}
 
@@ -123,10 +124,9 @@ if "extracted_text" not in st.session_state: st.session_state.extracted_text = "
 if "current_mood" not in st.session_state: st.session_state.current_mood = "neutral"
 if "tutor_message" not in st.session_state: st.session_state.tutor_message = ""
 
-# AUDIO
+# AUDIO (Independent channels)
 if "chat_audio_path" not in st.session_state: st.session_state.chat_audio_path = None
 if "tutor_audio_path" not in st.session_state: st.session_state.tutor_audio_path = None
-if "audio_autoplay_key" not in st.session_state: st.session_state.audio_autoplay_key = 0
 
 if "quiz_data" not in st.session_state: st.session_state.quiz_data = []
 if "quiz_submitted" not in st.session_state: st.session_state.quiz_submitted = False
@@ -147,7 +147,7 @@ def auth_screen():
         
         tab1, tab2, tab3 = st.tabs(["Login", "Register", "Forgot Password"])
         
-        # --- LOGIN ---
+        # LOGIN
         with tab1:
             with st.form("login"):
                 email = st.text_input("Email")
@@ -155,13 +155,16 @@ def auth_screen():
                 submit = st.form_submit_button("Sign In")
                 
                 if submit:
+                    # 1. Attempt Login Logic
                     user_obj = None
                     error_msg = None
+                    
                     try:
                         user_obj = auth.sign_in_with_email_and_password(email, password)
                     except Exception as e:
-                        error_msg = "Login failed. Check credentials."
+                        error_msg = "Login failed. Please check your credentials."
 
+                    # 2. Handle Result OUTSIDE the try block to prevent weird UI states
                     if user_obj:
                         st.session_state.user = user_obj
                         try:
@@ -177,7 +180,7 @@ def auth_screen():
                     else:
                         st.error(error_msg)
         
-        # --- REGISTER ---
+        # REGISTER
         with tab2:
             with st.form("signup"):
                 new_username = st.text_input("Username (for Profile)")
@@ -187,10 +190,8 @@ def auth_screen():
                 submit_reg = st.form_submit_button("Create Account")
                 
                 if submit_reg:
-                    if new_pass != confirm_pass: 
-                        st.error("Passwords do not match!")
-                    elif not new_username:
-                        st.error("Username is required.")
+                    if new_pass != confirm_pass: st.error("Passwords do not match!")
+                    elif not new_username: st.error("Username is required.")
                     else:
                         try:
                             user = auth.create_user_with_email_and_password(new_email, new_pass)
@@ -199,7 +200,7 @@ def auth_screen():
                             st.success("Account created! Please login.")
                         except Exception as e: st.error(f"Error: {e}")
 
-        # --- FORGOT PASSWORD ---
+        # FORGOT PASSWORD
         with tab3:
             st.info("ℹ️ Check Spam folder if email doesn't appear.")
             reset_email = st.text_input("Enter your email")
@@ -232,11 +233,6 @@ def main_app():
         if st.button("Logout"):
             st.session_state.clear()
             st.rerun()
-
-    # AUDIO STOP LOGIC
-    if nav != "Classroom":
-        st.session_state.chat_audio_path = None
-        st.session_state.tutor_audio_path = None
 
     # -------------------------
     # PAGE: CLASSROOM
@@ -282,15 +278,18 @@ def main_app():
         with col4: 
             if st.button("😃 Happy", use_container_width=True): trigger_mood("happy")
 
-        # 2. TUTOR MESSAGE (TOP)
+        # 2. TUTOR MESSAGE (WAKE UP / CONFUSED)
         if st.session_state.tutor_message:
             style = "boost-card" if st.session_state.current_mood == "sleepy" else "tutor-box"
             st.markdown(f"<div class='{style}'>{st.session_state.tutor_message}</div>", unsafe_allow_html=True)
             
-            # TUTOR AUDIO (Auto-Play for Wake Up)
+            # TUTOR AUDIO (No key to avoid crash on old Streamlit)
             if st.session_state.tutor_audio_path:
-                # We use a unique key every time so it refreshes
-                st.audio(st.session_state.tutor_audio_path, format="audio/mp3", autoplay=True)
+                # Try to use autoplay if supported, else just show
+                try:
+                    st.audio(st.session_state.tutor_audio_path, format="audio/mp3", autoplay=True)
+                except:
+                    st.audio(st.session_state.tutor_audio_path, format="audio/mp3")
 
         # 3. LEARNING AREA
         t1, t2 = st.tabs(["📚 Study Material", "📝 Quiz"])
@@ -320,17 +319,17 @@ def main_app():
             with c_chat:
                 st.subheader(f"Chat ({st.session_state.current_mood.upper()})")
                 
-                # AI Response Area
+                # AI Response Area (PERSISTENT)
                 if st.session_state.last_bot_answer:
                     st.markdown(f"<div class='ai-response'><b>🧠 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
                     
-                    # --- FIX: CHAT AUDIO PLAYER ---
-                    # We display this even if Sleepy mode is on.
+                    # CHAT AUDIO (Always Visible)
                     if st.session_state.chat_audio_path:
                         st.markdown("**Audio Explanation:**")
-                        # We do NOT autoplay this one if it's a re-render, only on generation
-                        # But since we handle generation below, we just show the player here
-                        st.audio(st.session_state.chat_audio_path, format="audio/mp3")
+                        try:
+                            st.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=True)
+                        except:
+                            st.audio(st.session_state.chat_audio_path, format="audio/mp3")
 
                 input_container = st.container()
                 col_mic, col_text = input_container.columns([1, 6])
@@ -473,15 +472,15 @@ def main_app():
         st.title("🚀 About AuraLearn")
         st.markdown("""
         ### **What is AuraLearn?**
-        AuraLearn is an intelligent, empathy-driven AI Tutoring Platform.
+        AuraLearn is an intelligent, empathy-driven AI Tutoring Platform designed to make learning personalized and adaptive.
         
         ### **🌟 Unique Features**
         1.  **🧠 Emotion-Adaptive Intelligence:**
             * **Confused?** The AI auto-detects this and simplifies complex concepts using analogies.
             * **Sleepy?** It generates physical/sensory wake-up activities instead of boring quizzes.
-        2.  **💬 Conversational Memory:** Chat with your PDF notes naturally.
-        3.  **📚 Document Mastery:** Upload any PDF, and the system instantly learns it.
-        4.  **☁️ Cloud Sync:** Your progress, badges, and history are saved securely in the cloud.
+        2.  **💬 Conversational Memory:** Chat with your PDF notes naturally. The AI remembers context.
+        3.  **📚 Document Mastery:** Upload any PDF, and the system instantly learns it to answer questions and generate quizzes.
+        4.  **☁️ Cloud Sync:** Your progress, badges, and history are saved securely in the cloud (Firebase).
         5.  **🗣️ Voice Interaction:** Speak to your tutor and hear explanations read back to you.
         
         ---
