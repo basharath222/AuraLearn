@@ -1,0 +1,65 @@
+[
+    {
+        "timestamp": "2025-11-21 11:03:48",
+        "score": 7,
+        "total": 10,
+        "mood": "confused",
+        "percentage": 70.0
+    },
+    {
+        "timestamp": "2025-11-21 11:04:33",
+        "score": 0,
+        "total": 10,
+        "mood": "confused",
+        "percentage": 0.0
+    },
+    {
+        "timestamp": "2025-11-21 11:04:40",
+        "score": 0,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 0.0
+    },
+    {
+        "timestamp": "2025-11-21 11:05:01",
+        "score": 0,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 0.0
+    },
+    {
+        "timestamp": "2025-11-21 11:05:17",
+        "score": 0,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 0.0
+    },
+    {
+        "timestamp": "2025-11-21 11:06:05",
+        "score": 3,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 30.0
+    },
+    {
+        "timestamp": "2025-11-21 11:06:49",
+        "score": 0,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 0.0
+    },
+    {
+        "timestamp": "2025-11-21 11:07:46",
+        "score": 6,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 60.0
+    },
+    {
+        "timestamp": "2025-11-21 11:14:46",
+        "score": 0,
+        "total": 10,
+        "mood": "sleepy",
+        "percentage": 0.0
+    }
+]

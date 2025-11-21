@@ -3,9 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+.env
 # ---- Virtual Environment ----
 venv/
+venv2/
 env/
 
 # ---- Streamlit ----

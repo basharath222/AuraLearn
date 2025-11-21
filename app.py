@@ -1,220 +1,190 @@
 import streamlit as st
-import pyrebase
-import json
-from pathlib import Path
+import pandas as pd
 from modules.pdf_processor import extract_text_from_pdf
 
-# ======================
-# Page Settings + Global CSS
-# ======================
+# Page Config
 st.set_page_config(page_title="AuraLearn", page_icon="🧠", layout="wide")
 
-# Custom CSS Styling
+# Session State Init
+if "user" not in st.session_state: st.session_state.user = {"email": "student@auralearn.ai"} # Simulating logged in user
+if "extracted_text" not in st.session_state: st.session_state.extracted_text = ""
+if "current_mood" not in st.session_state: st.session_state.current_mood = "neutral"
+
+# CSS Styling
 st.markdown("""
 <style>
-
-/* ---------- Navbar ---------- */
-.navbar {
-    background: linear-gradient(90deg, #6a11cb, #2575fc);
-    padding: 18px;
-    border-radius: 10px;
-    margin-bottom: 25px;
-}
-
-.nav-item {
-    color: white !important;
-    font-size: 20px;
-    font-weight: 600;
-    padding: 0px 25px;
-    text-decoration: none;
-}
-
-.nav-item:hover {
-    color: #d6e9ff !important;
-}
-
-/* Centered Card Styling */
-.card {
-    background: linear-gradient(180deg, #b7e1ff, #e9c7ff);
-    padding: 40px;
-    border-radius: 20px;
-    width: 65%;
-    margin-left: auto;
-    margin-right: auto;
-    box-shadow: 0px 4px 20px rgba(0,0,0,0.2);
-}
-
-/* Inputs */
-input, textarea {
-    border-radius: 15px !important;
-}
-
-/* Buttons */
-.stButton>button {
-    background: linear-gradient(90deg, #6a11cb, #2575fc);
-    color: white;
-    border-radius: 12px;
-    padding: 10px 20px;
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.stButton>button:hover {
-    opacity: 0.9;
-}
-
-/* Headers */
-h1, h2, h3 {
-    font-weight: 800;
-}
-
-/* Center Text */
-.center {
-    text-align: center;
-}
-
+    .aura-card { background-color: #e0f7fa; padding: 20px; border-radius: 12px; border: 2px solid #00bcd4; color: #006064; }
+    .metric-card { background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
+# ==========================
+# SIDEBAR (Navigation)
+# ==========================
+st.sidebar.title("🧠 AuraLearn")
+choice = st.sidebar.radio("Go to", ["Study Room", "Progress Dashboard"])
 
-# ======================
-# Load Firebase Config
-# ======================
-config_path = Path("config/firebase_config.json")
-if not config_path.exists():
-    st.error("Firebase config file not found! Add 'firebase_config.json' inside /config folder.")
-    st.stop()
+# ==========================
+# 1. STUDY ROOM (Main App)
+# ==========================
+if choice == "Study Room":
+    st.title("📘 Interactive Classroom")
+    
+    tab1, tab2 = st.tabs(["🤖 Chat & Voice", "📝 Take Quiz"])
 
-with open(config_path) as f:
-    firebaseConfig = json.load(f)
+    # --- TAB 1: LEARNING ---
+    with tab1:
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("1. Material")
+            uploaded_file = st.file_uploader("Upload PDF Notes", type=["pdf"])
+            if uploaded_file:
+                with st.spinner("Analyzing Content..."):
+                    text = extract_text_from_pdf(uploaded_file)
+                    st.session_state.extracted_text = text
+                    st.success("Notes Loaded!")
 
-firebase = pyrebase.initialize_app(firebaseConfig)
-auth = firebase.auth()
+        with col2:
+            st.subheader("2. Aura Sense")
+            # Mood Display
+            st.markdown(f"""
+            <div class="aura-card">
+                <h4>Current Vibe: {st.session_state.current_mood.upper()}</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("📷 Update Mood"):
+                with st.spinner("Scanning..."):
+                    from modules.emotion_detector import capture_live_mood
+                    st.session_state.current_mood = capture_live_mood(duration=3)
+                    st.rerun()
 
-if "user" not in st.session_state:
-    st.session_state.user = None
+            st.divider()
+            
+            # Voice & Chat
+            col_v1, col_v2 = st.columns([1, 5])
+            with col_v1:
+                if st.button("🎤", help="Speak your question"):
+                    from modules.voice_handler import listen_to_user
+                    with st.spinner("Listening..."):
+                        v_text = listen_to_user()
+                        if v_text: st.session_state.voice_query = v_text
+            
+            with col_v2:
+                def_val = st.session_state.get("voice_query", "")
+                q = st.text_input("Ask your teacher:", value=def_val)
 
-
-# ======================
-# Navbar UI
-# ======================
-st.markdown("""
-<div class="navbar">
-    <span style="color:white; font-size:28px; font-weight:700; margin-right:50px;">
-        AuraLearn
-    </span>
-</div>
-""", unsafe_allow_html=True)
-
-
-
-# ======================
-# Sidebar Navigation
-# ======================
-if st.session_state.user:
-    choice = st.sidebar.radio("Navigation", ["Upload Notes", "Live Emotion Session", "Logout"])
-else:
-    choice = st.sidebar.radio("Navigation", ["Login", "Signup", "Forgot Password"])
-
-
-
-
-# ======================
-# LOGIN PAGE
-# ======================
-if choice == "Login":
-    st.markdown("<h2 class='center'>Login to Your Account</h2>", unsafe_allow_html=True)
-
-    with st.container():
-        with st.form("login_form"):
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login")
-
-            if submit:
-                try:
-                    user = auth.sign_in_with_email_and_password(email, password)
-                    st.session_state.user = user
-                    st.success("Login Successful 🎉")
-                    st.balloons()
-                except Exception as e:
-                    st.error(f"Error: {e}")
-
-    if st.session_state.user:
-        st.info(f"Logged in as **{st.session_state.user['email']}**")
-
-
-# ======================
-# SIGNUP PAGE
-# ======================
-elif choice == "Signup":
-    st.markdown("<h2 class='center'>Create Your AuraLearn Account</h2>", unsafe_allow_html=True)
-
-    with st.container():
-        with st.form("signup_form"):
-            username = st.text_input("Username")
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            submit = st.form_submit_button("Create Account")
-
-            if submit:
-                if password != confirm_password:
-                    st.error("Passwords do not match ❌")
-                elif len(password) < 6:
-                    st.warning("Password must be at least 6 characters.")
+            if st.button("Explain It"):
+                if st.session_state.extracted_text:
+                    with st.spinner("Thinking..."):
+                        from modules.llm_handler import explain_with_emotion, explain_with_emotion
+                        from modules.voice_handler import text_to_speech
+                        
+                        ans = explain_with_emotion(st.session_state.extracted_text[:3000], q, st.session_state.current_mood)
+                        st.info(ans)
+                        
+                        # Audio
+                        audio_file = text_to_speech(ans.replace("*", ""))
+                        if audio_file: st.audio(audio_file)
                 else:
-                    try:
-                        user = auth.create_user_with_email_and_password(email, password)
-                        st.success("Account Created 🎉")
-                        st.info("Go to Login to continue.")
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                    st.warning("Upload a PDF first!")
 
+    # --- TAB 2: QUIZ (Enhanced) ---
+    with tab2:
+        st.header("🧠 Knowledge Check")
+        
+        if st.button("Generate New Quiz"):
+            if st.session_state.extracted_text:
+                with st.spinner("Drafting questions..."):
+                    from modules.quiz_generator import generate_quiz
+                    st.session_state.quiz_data = generate_quiz(st.session_state.extracted_text)
+                    st.session_state.quiz_submitted = False
+            else:
+                st.error("Upload PDF first!")
 
-# ======================
-# FORGOT PASSWORD
-# ======================
-elif choice == "Forgot Password":
-    st.markdown("<h2 class='center'>Reset Your Password</h2>", unsafe_allow_html=True)
+        if "quiz_data" in st.session_state and st.session_state.quiz_data:
+            # Use a form so we can submit all at once
+            with st.form("quiz_form"):
+                user_answers = {}
+                for i, q in enumerate(st.session_state.quiz_data):
+                    st.markdown(f"**Q{i+1}: {q['question']}**")
+                    user_answers[i] = st.radio(f"Select:", q['options'], key=f"q{i}", index=None)
+                    st.write("---")
+                
+                submitted = st.form_submit_button("Submit Answers")
+                
+                if submitted:
+                    st.session_state.quiz_submitted = True
+                    
+            # --- RESULTS SECTION (Outside Form) ---
+            if st.session_state.get("quiz_submitted", False):
+                score = 0
+                total = len(st.session_state.quiz_data)
+                
+                st.subheader("📊 Results")
+                for i, q in enumerate(st.session_state.quiz_data):
+                    correct_idx = q['answer']
+                    correct_txt = q['options'][correct_idx]
+                    user_txt = st.session_state.get(f"q{i}")
+                    
+                    if user_txt == correct_txt:
+                        score += 1
+                        st.success(f"Q{i+1}: Correct! ✅")
+                    else:
+                        st.error(f"Q{i+1}: Incorrect ❌")
+                        st.caption(f"👉 Correct Answer: **{correct_txt}**")
 
-    email = st.text_input("Your Registered Email")
+                # Save Data
+                from modules.data_handler import save_result
+                save_result(score, total, st.session_state.current_mood)
+                
+                # Teacher Feedback
+                percentage = (score/total)*100
+                if percentage == 100:
+                    st.balloons()
+                    st.success("🏆 Perfect Score! You mastered this topic.")
+                elif percentage >= 50:
+                    st.info("👍 Good effort! Review the wrong answers to improve.")
+                else:
+                    st.warning("📚 Let's review the notes again. Don't give up!")
 
-    if st.button("Send Reset Link"):
-        try:
-            auth.send_password_reset_email(email)
-            st.info("Reset link sent to your email.")
-        except Exception as e:
-            st.error(f"Error: {e}")
+# ==========================
+# 2. DASHBOARD (New!)
+# ==========================
+elif choice == "Progress Dashboard":
+    st.title("📈 Student Progress Report")
+    
+    from modules.data_handler import load_history
+    history = load_history()
+    
+    if not history:
+        st.info("No quiz data yet. Take a quiz in the Study Room!")
+    else:
+        # KPIs
+        df = pd.DataFrame(history)
+        avg_score = df["percentage"].mean()
+        total_quizzes = len(df)
+        common_mood = df["mood"].mode()[0] if not df["mood"].empty else "N/A"
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Quizzes", total_quizzes)
+        c2.metric("Average Score", f"{avg_score:.1f}%")
+        c3.metric("Dominant Mood", common_mood.upper())
+        
+        st.divider()
+        
+        # Charts
+        col_chart1, col_chart2 = st.columns([2, 1])
+        
+        with col_chart1:
+            st.subheader("Performance History")
+            st.line_chart(df[["timestamp", "percentage"]].set_index("timestamp"))
+        
+        with col_chart2:
+            st.subheader("Mood Distribution")
+            mood_counts = df["mood"].value_counts()
+            st.bar_chart(mood_counts)
 
-
-# ======================
-# UPLOAD NOTES PAGE
-# ======================
-elif choice == "Upload Notes" and st.session_state.user:
-    st.markdown("<h2 class='center'>📘 Upload Your Study Notes</h2>", unsafe_allow_html=True)
-
-    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
-
-    if uploaded_file:
-        with st.spinner("Extracting text from PDF..."):
-            extracted_text = extract_text_from_pdf(uploaded_file)
-
-        st.success("Extraction Complete ✔️")
-
-        st.text_area("Extracted Text", extracted_text, height=400)
-
-        st.download_button(
-            "Download Extracted Notes",
-            extracted_text,
-            file_name="notes.txt",
-            mime="text/plain"
-        )
-
-
-# ======================
-# LOGOUT
-# ======================
-if choice == "Logout":
-    st.session_state.user = None
-    st.success("Logged out successfully.")
+        st.subheader("Recent Activity")
+        st.dataframe(df.tail(5))
