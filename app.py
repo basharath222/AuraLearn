@@ -31,6 +31,10 @@ def inject_css():
     st.markdown(f"""
     <style>
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
+        /* --- HIDE STREAMLIT BRANDING (The "Credits") --- */
+        #MainMenu {{visibility: hidden;}} /* Hides the top-right hamburger menu */
+        footer {{visibility: hidden;}}    /* Hides "Made with Streamlit" footer */
+        header {{visibility: hidden;}}    /* Hides the top colored running bar */
         
         /* --- GLOBAL BUTTONS --- */
         /* We use a very specific selector to target ONLY standard buttons, not icons */
@@ -102,17 +106,28 @@ def inject_css():
     """, unsafe_allow_html=True)
 
 # ==========================
-# 3. FIREBASE SETUP
+# 3. FIREBASE SETUP (Cloud Compatible)
 # ==========================
-config_path = Path("config/firebase_config.json")
-if not config_path.exists():
-    st.error("❌ Configuration missing. Please add config/firebase_config.json")
-    st.stop()
+try:
+    # 1. Try loading from Streamlit Secrets (Cloud)
+    if "firebase" in st.secrets:
+        firebaseConfig = dict(st.secrets["firebase"])
+    # 2. Try loading from Local JSON (Localhost)
+    else:
+        config_path = Path("config/firebase_config.json")
+        if config_path.exists():
+            with open(config_path) as f:
+                firebaseConfig = json.load(f)
+        else:
+            st.error("Firebase config not found in Secrets or local file.")
+            st.stop()
 
-with open(config_path) as f: firebaseConfig = json.load(f)
-firebase = pyrebase.initialize_app(firebaseConfig)
-auth = firebase.auth()
-db = firebase.database() 
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    auth = firebase.auth()
+    db = firebase.database()
+except Exception as e:
+    st.error(f"Database Connection Error: {e}")
+    st.stop() 
 
 # ==========================
 # 4. SESSION STATE
@@ -225,10 +240,10 @@ def main_app():
         st.rerun()
 
     with st.sidebar:
-        st.title("👤 Profile")
+        st.title("Let's Learn!")
         st.write(f"**{st.session_state.username_display}**")
         st.divider()
-        nav = st.radio("Navigation", ["Classroom", "Progress & Badges", "About Project"])
+        nav = st.radio("Navigation", ["Classroom", "Progress & Badges", "About AuraLearn"])
         st.divider()
         if st.button("Logout"):
             st.session_state.clear()
@@ -249,6 +264,10 @@ def main_app():
             st.session_state.tutor_message = "" 
             st.session_state.tutor_audio_path = None 
             
+            # === FIX: STOP PREVIOUS AUDIO ===
+            # This line wipes the explanation audio so it doesn't overlap
+            st.session_state.chat_audio_path = None 
+            
             if mood == "confused":
                 with st.spinner("🧠 Teacher is simplifying..."):
                     if st.session_state.last_bot_answer:
@@ -262,13 +281,15 @@ def main_app():
 
                     if st.session_state.tutor_message:
                         st.session_state.tutor_audio_path = text_to_audio_file(st.session_state.tutor_message.replace("*", ""))
+                        st.session_state.force_autoplay = True
             
             elif mood == "sleepy" and st.session_state.extracted_text:
                 with st.spinner("Generating Energy Booster..."):
                     act = generate_quick_activity(st.session_state.extracted_text)
-                    st.session_state.tutor_message = f"**⚡ ENERGY BOOST:**\n\n{act}"
+                    st.session_state.tutor_message = f"⚡ ENERGY BOOST :\n\n{act}"
                     st.session_state.tutor_audio_path = text_to_audio_file(act)
-
+                    st.session_state.force_autoplay = True
+                    # st.session_state.tutor_audio_key = time.time()
         with col1: 
             if st.button("🙂 Ready", use_container_width=True): trigger_mood("neutral")
         with col2: 
@@ -403,14 +424,14 @@ def main_app():
                     
                     st.metric("Final Score", f"{score}/{len(st.session_state.quiz_data)}")
                     
-                    if st.button("🔄 Generate New Questions"):
-                        with st.spinner("Refreshing..."):
-                            st.session_state.quiz_data = [] 
-                            new_q = generate_quiz(st.session_state.extracted_text)
-                            st.session_state.quiz_data = new_q
-                            st.session_state.quiz_submitted = False
-                            st.session_state.quiz_ref += 1
-                            st.rerun()
+                    # if st.button("🔄 Generate New Questions"):
+                    #     with st.spinner("Refreshing..."):
+                    #         st.session_state.quiz_data = [] 
+                    #         new_q = generate_quiz(st.session_state.extracted_text)
+                    #         st.session_state.quiz_data = new_q
+                    #         st.session_state.quiz_submitted = False
+                    #         st.session_state.quiz_ref += 1
+                    #         st.rerun()
             else:
                 st.info("Upload notes first.")
 

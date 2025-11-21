@@ -1,24 +1,9 @@
 streamlit
-opencv-python
-deepface
-langchain
-pypdf2
-firebase-admin
-chromadb
-python-dotenv
-openai
 pyrebase4
+pandas
+python-dotenv
+groq
+PyPDF2
 pdfplumber
-# tensorflow-cpu==2.10.0
-# google-auth 
-# google-auth-oauthlib 
-# google-auth-httplib2
-# tf-keras
-# tf_keras-nightly
-# Core framework
-
-
-
-
-
-
+SpeechRecognition
+gTTS

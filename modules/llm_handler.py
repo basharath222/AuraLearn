@@ -2,12 +2,18 @@
 import os
 from groq import Groq
 from dotenv import load_dotenv
+import streamlit as st
 
 # Load .env file
 load_dotenv()
 
-# Read key from environment
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Inside modules/llm_handler.py
+
+# Try getting key from Streamlit Secrets first, then Environment variable
+if "GROQ_API_KEY" in st.secrets:
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+else:
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Initialize Groq client
 # If you are running locally and .env fails, you can paste your key string directly below:
@@ -97,9 +103,9 @@ def simplify_previous_answer(previous_answer: str, question: str):
     Your Previous Answer: "{previous_answer}"
     
     Task:
-    1. Apologize briefly.
-    2. Re-explain the answer in a totally different, simpler way (EL15).
-    3. Use an analogy.
+    
+    1. Re-explain the answer in a totally different, simpler way (EL15).
+    2. Use an analogy.
     """
     messages = [{"role": "user", "content": prompt}]
     return _chat(messages, temperature=0.6)
