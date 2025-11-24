@@ -5,6 +5,7 @@ import time
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+from streamlit_mic_recorder import mic_recorder
 
 # Modules
 from modules.pdf_processor import extract_text_from_pdf
@@ -340,7 +341,7 @@ def main_app():
             with c_chat:
                 st.subheader(f"Chat ({st.session_state.current_mood.upper()})")
                 
-                # AI Response Area (PERSISTENT)
+                # 1. AI Response Area (PERSISTENT)
                 if st.session_state.last_bot_answer:
                     st.markdown(f"<div class='ai-response'><b>🧠 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
                     
@@ -352,19 +353,36 @@ def main_app():
                         except:
                             st.audio(st.session_state.chat_audio_path, format="audio/mp3")
 
+                # 2. Input Container
                 input_container = st.container()
                 col_mic, col_text = input_container.columns([1, 6])
+                
                 with col_mic:
                     st.write("") 
                     st.write("") 
-                    if st.button("🎙️", help="Speak"):
-                        txt = listen_to_user()
-                        if txt: st.session_state.last_user_question = txt
+                    # --- BROWSER MICROPHONE (Cloud Compatible) ---
+                    # This replaces st.button("🎙️")
+                    audio_data = mic_recorder(
+                        start_prompt="🎙️",
+                        stop_prompt="⏹️",
+                        key='recorder',
+                        format="wav",
+                        use_container_width=True
+                    )
+                    
+                    # If recording finishes, transcribe immediately
+                    if audio_data:
+                        from modules.voice_handler import transcribe_audio_bytes
+                        transcribed_text = transcribe_audio_bytes(audio_data['bytes'])
+                        if transcribed_text:
+                            st.session_state.last_user_question = transcribed_text
+                            st.rerun() # Refresh to show text in box
                 
                 with col_text:
                     q_val = st.session_state.get("last_user_question", "")
                     user_q = st.text_input("Ask a doubt...", value=q_val, label_visibility="hidden", placeholder="Type or Speak...")
 
+                # 3. Explain Button
                 if st.button("✨ Explain It", type="primary", use_container_width=True):
                     if st.session_state.extracted_text and user_q:
                         st.session_state.last_user_question = user_q
@@ -542,12 +560,7 @@ def main_app():
 
         ---
 
-        ### **💻 Tech Stack**
-        * **Frontend:** Streamlit (Python)
-        * **AI Engine:** Groq (Llama 3 70B) + LangChain
-        * **Backend & Auth:** Google Firebase (Realtime Database)
-        * **Speech:** SpeechRecognition (STT) & gTTS (Text-to-Speech)
-        * **Data Processing:** PyPDF2 & PDFPlumber
+        
 
         ---
         *AuraLearn is not just a study tool; it is a tutor that listens, adapts, and grows with you.*
