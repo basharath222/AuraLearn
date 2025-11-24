@@ -20,15 +20,20 @@ def text_to_audio_file(text):
 # Cloud Transcriber (Fast)
 def transcribe_audio_bytes(audio_bytes):
     r = sr.Recognizer()
+    # Improve accuracy for technical terms
+    r.energy_threshold = 300
+    r.dynamic_energy_threshold = True
+    
     try:
-        # Convert web audio bytes to WAV
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
             tmp_file.write(audio_bytes)
             tmp_path = tmp_file.name
         
         with sr.AudioFile(tmp_path) as source:
-            # Listen for a maximum of 5 seconds to keep it snappy
-            audio_data = r.record(source, duration=5) 
+            # Adjust for noise first
+            r.adjust_for_ambient_noise(source, duration=0.5)
+            audio_data = r.record(source) # Read whole file
+            # Use Google's better recognition model if available (default uses it)
             text = r.recognize_google(audio_data)
             
         os.remove(tmp_path)
