@@ -348,47 +348,67 @@ def main_app():
             with c_chat:
                 st.subheader(f"Chat ({st.session_state.current_mood.upper()})")
                 
-                # 1. Persistent Audio & Answer
+                # 1. AI Response Area
                 if st.session_state.last_bot_answer:
                     st.markdown(f"<div class='ai-response'><b>🧠 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
                     
-                    # Keep Chat Audio Visible (Paused if Tutor Message is active)
                     if st.session_state.chat_audio_path:
-                        st.caption("Audio Explanation:")
+                        st.markdown("**Audio Explanation:**")
                         try:
-                            # Only autoplay if the flag is set AND we are not in a Sleepy/Confused interruption
-                            should_play = st.session_state.force_autoplay and not st.session_state.tutor_message
-                            st.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=should_play)
-                            if should_play: st.session_state.force_autoplay = False
+                            st.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=st.session_state.force_autoplay)
                         except:
                             st.audio(st.session_state.chat_audio_path, format="audio/mp3")
+                        # Reset flag so it doesn't keep replaying on every interaction
+                        st.session_state.force_autoplay = False
 
-                # 2. Input Area (Fixed Layout)
+                # 2. INPUT AREA (Fixed Blinking & Text Sync)
                 input_container = st.container()
-                c1, c2 = input_container.columns([1, 8], gap="small") # Adjusted ratio for better look
+                col_mic, col_text = input_container.columns([1, 6])
                 
-                with c1:
-                    # CLOUD MIC RECORDER (Invisible styling wrapper)
-                    st.write("") # Spacer to align with text box
-                    st.write("")
-                    audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="wav", use_container_width=True)
+                with col_mic:
+                    st.write("") 
+                    st.write("") 
+                    # Voice Recorder
+                    audio_data = mic_recorder(
+                        start_prompt="🎙️",
+                        stop_prompt="⏹️",
+                        key='recorder',
+                        format="wav",
+                        use_container_width=True
+                    )
+
+                # VOICE PROCESSING LOGIC (Prevents Infinite Loop)
+                if audio_data:
+                    # Only process if we haven't processed this specific audio yet
+                    # We can't check audio ID, so we check if the text is new.
+                    from modules.voice_handler import transcribe_audio_bytes
                     
-                    if audio_data:
-                        from modules.voice_handler import transcribe_audio_bytes
-                        text = transcribe_audio_bytes(audio_data['bytes'])
-                        if text:
-                            st.session_state.last_user_question = text
-                            st.toast(f"🗣️ You said: {text}") # Visual feedback
-                            st.rerun()
+                    # Transcribe (This might take a second, show a spinner)
+                    if "last_audio_bytes" not in st.session_state or st.session_state.last_audio_bytes != audio_data['bytes']:
+                         with st.spinner("Transcribing..."):
+                            text = transcribe_audio_bytes(audio_data['bytes'])
+                            if text:
+                                # Update the session state used by the text input
+                                st.session_state.user_query_input = text
+                                st.session_state.last_user_question = text
+                                st.session_state.last_audio_bytes = audio_data['bytes'] # Mark as processed
+                                st.rerun() # Force refresh once to show text
+                
+                with col_text:
+                    # LINK TEXT INPUT DIRECTLY TO SESSION STATE KEY
+                    # This ensures when we update 'user_query_input' above, this box updates automatically.
+                    user_q = st.text_input(
+                        "Ask a doubt...", 
+                        key="user_query_input", 
+                        label_visibility="hidden", 
+                        placeholder="Type or Speak..."
+                    )
 
-                with c2:
-                    q_val = st.session_state.get("last_user_question", "")
-                    user_q = st.text_input("Ask a doubt...", value=q_val, label_visibility="hidden", placeholder="Type or use Mic...")
-
+                # 3. Explain Button
                 if st.button("✨ Explain It", type="primary", use_container_width=True):
                     if st.session_state.extracted_text and user_q:
                         st.session_state.last_user_question = user_q
-                        # Clear tutor message to focus on new question
+                        # Clear tutor message
                         st.session_state.tutor_message = ""
                         
                         with st.spinner("Thinking..."):
