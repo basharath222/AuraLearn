@@ -260,11 +260,18 @@ def main_app():
     # -------------------------
     # PAGE: CLASSROOM
     # -------------------------
+    # -------------------------
+    # PAGE: CLASSROOM
+    # -------------------------
     if nav == "Classroom":
         st.title("Interactive Classroom")
 
-        if "page_switched" not in st.session_state:
-            st.session_state.page_switched = True
+        # FIX: Reset quiz state if returning from another page
+        if "last_nav" not in st.session_state or st.session_state.last_nav != "Classroom":
+             st.session_state.quiz_data = []
+             st.session_state.quiz_submitted = False
+             st.session_state.quiz_ref += 1
+             st.session_state.last_nav = "Classroom"
         
         # 1. MOOD CHECK
         st.subheader("How are you feeling?")
@@ -432,7 +439,7 @@ def main_app():
                     # --- NEW: Difficulty & Count Inputs ---
                     c1, c2 = st.columns(2)
                     with c1:
-                        num_q = st.number_input("Number of Questions", min_value=3, max_value=20, value=5)
+                        num_q = st.number_input("Number of Questions", min_value=3, max_value=100, value=5)
                     with c2:
                         diff = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=1) # Index 1 = Medium default
                     
@@ -496,53 +503,75 @@ def main_app():
     # -------------------------
     # PAGE: PROGRESS
     # -------------------------
+    # -------------------------
+    # PAGE: PROGRESS
+    # -------------------------
     elif nav == "Progress & Badges":
+        st.session_state.last_nav = "Progress" # Mark page switch
         st.title("🏆 Your Achievement Hub")
+        
+        # 1. ROBUST DATA LOADING
+        history = []
         try:
-            history = load_history_from_cloud(user_id)
-        except:
-            history = []
-            st.warning("No database connection.")
+            # Direct DB call to debug
+            raw_data = db.child("users").child(user_id).child("history").get()
+            if raw_data and raw_data.val():
+                data = raw_data.val()
+                # Handle Dictionary (Firebase default) vs List
+                if isinstance(data, dict):
+                    history = list(data.values())
+                elif isinstance(data, list):
+                    history = [x for x in data if x is not None]
+        except Exception as e:
+            st.error(f"Sync Error: {e}")
         
         if history:
-            df = pd.DataFrame(history)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            total_sessions = len(df)
-            avg_score = df['percentage'].mean()
-            perfect_scores = len(df[df['percentage'] == 100])
-            
-            st.subheader("🎖️ Badges Earned")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                if total_sessions >= 1: st.success("🎓 **Novice**\n\n1st Session")
-                else: st.info("🔒 **Novice**\n\nComplete 1 session")
-            with c2:
-                if total_sessions >= 5: st.success("🚀 **Scholar**\n\n5 Sessions")
-                else: st.info(f"🔒 **Scholar**\n\n{5-total_sessions} to go")
-            with c3:
-                if total_sessions >= 10: st.success("👑 **Master**\n\n10 Sessions")
-                else: st.info(f"🔒 **Master**\n\n{10-total_sessions} to go")
-            st.write("")
-            c4, c5, c6 = st.columns(3)
-            with c4:
-                if avg_score >= 90: st.success("🧠 **Genius**\n\nAvg > 90%")
-                else: st.info("🔒 **Genius**\n\nGet >90% Avg")
-            with c5:
-                if perfect_scores >= 1: st.success("🎯 **Sharpshooter**\n\n100% Score")
-                else: st.info("🔒 **Sharpshooter**\n\nGet 100% once")
-            with c6:
-                if total_sessions >= 20: st.success("🔥 **Unstoppable**\n\n20 Sessions")
-                else: st.info("🔒 **Unstoppable**\n\nKeep going!")
+            try:
+                df = pd.DataFrame(history)
+                # Ensure columns exist
+                if 'timestamp' not in df.columns: df['timestamp'] = datetime.now()
+                if 'percentage' not in df.columns: df['percentage'] = 0
+                
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                total_sessions = len(df)
+                avg_score = df['percentage'].mean()
+                perfect_scores = len(df[df['percentage'] == 100])
+                
+                st.subheader("🎖️ Badges Earned")
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    if total_sessions >= 1: st.success("🎓 **Novice**\n\n1st Session")
+                    else: st.info("🔒 **Novice**\n\nComplete 1 session")
+                with c2:
+                    if total_sessions >= 5: st.success("🚀 **Scholar**\n\n5 Sessions")
+                    else: st.info(f"🔒 **Scholar**\n\n{5-total_sessions} to go")
+                with c3:
+                    if total_sessions >= 10: st.success("👑 **Master**\n\n10 Sessions")
+                    else: st.info(f"🔒 **Master**\n\n{10-total_sessions} to go")
+                
+                st.write("")
+                c4, c5, c6 = st.columns(3)
+                with c4:
+                    if avg_score >= 90: st.success("🧠 **Genius**\n\nAvg > 90%")
+                    else: st.info("🔒 **Genius**\n\nGet >90% Avg")
+                with c5:
+                    if perfect_scores >= 1: st.success("🎯 **Sharpshooter**\n\n100% Score")
+                    else: st.info("🔒 **Sharpshooter**\n\nGet 100% once")
+                with c6:
+                    if total_sessions >= 20: st.success("🔥 **Unstoppable**\n\n20 Sessions")
+                    else: st.info("🔒 **Unstoppable**\n\nKeep going!")
 
-            st.divider()
-            st.subheader("📅 Weekly Activity")
-            df['date'] = df['timestamp'].dt.date
-            st.bar_chart(df['date'].value_counts())
-
-            with st.expander("View Full History"):
-                st.dataframe(df.sort_values(by='timestamp', ascending=False))
+                st.divider()
+                st.subheader("📅 Weekly Activity")
+                if not df.empty:
+                    df['date'] = df['timestamp'].dt.date
+                    st.bar_chart(df['date'].value_counts())
+                    with st.expander("View Full History"):
+                        st.dataframe(df.sort_values(by='timestamp', ascending=False))
+            except Exception as e:
+                st.error(f"Data Format Error: {e}")
         else:
-            st.info("Start learning to earn badges!")
+            st.info("Start learning to earn badges! (No data found)")
 
     # -------------------------
     # PAGE: ABOUT
