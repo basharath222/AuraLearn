@@ -109,23 +109,30 @@ def inject_css():
 # ==========================
 # 3. FIREBASE SETUP (Cloud Compatible)
 # ==========================
-try:
-    # 1. Try loading from Streamlit Secrets (Cloud)
-    if "firebase" in st.secrets:
-        firebaseConfig = dict(st.secrets["firebase"])
-    # 2. Try loading from Local JSON (Localhost)
+# ==========================
+# 3. FIREBASE SETUP (Cloud + Local Support)
+# ==========================
+# 1. Try to load from Streamlit Cloud Secrets
+if "firebase" in st.secrets:
+    firebaseConfig = dict(st.secrets["firebase"])
+# 2. If no secrets, try loading from Local JSON file
+else:
+    config_path = Path("config/firebase_config.json")
+    if config_path.exists():
+        with open(config_path) as f:
+            firebaseConfig = json.load(f)
     else:
-        config_path = Path("config/firebase_config.json")
-        if config_path.exists():
-            with open(config_path) as f:
-                firebaseConfig = json.load(f)
-        else:
-            st.error("Firebase config not found in Secrets or local file.")
-            st.stop()
+        st.error("❌ Configuration missing. Please set up Streamlit Secrets or add config/firebase_config.json")
+        st.stop()
 
+# Initialize Connection
+try:
     firebase = pyrebase.initialize_app(firebaseConfig)
     auth = firebase.auth()
     db = firebase.database()
+except Exception as e:
+    st.error(f"Firebase Connection Error: {e}")
+    st.stop()
 except Exception as e:
     st.error(f"Database Connection Error: {e}")
     st.stop() 
