@@ -262,7 +262,7 @@ def main_app():
     # -------------------------
     if nav == "Classroom":
         st.title("Interactive Classroom")
-        
+
         if "page_switched" not in st.session_state:
             st.session_state.page_switched = True
         
@@ -425,24 +425,25 @@ def main_app():
 
         with t2:
             if st.session_state.extracted_text:
-                # 1. GENERATE BUTTON (If no quiz exists)
+                # 1. GENERATE QUIZ (Clean Start)
                 if not st.session_state.quiz_data:
+                    st.write("### Generate Quiz")
+                    num_q = st.slider("Number of questions:", min_value=3, max_value=10, value=5)
+                    
                     if st.button("Generate Cloud Quiz", type="primary"):
                         with st.spinner("Creating..."):
-                            st.session_state.quiz_data = generate_quiz(st.session_state.extracted_text)
+                            st.session_state.quiz_data = generate_quiz(st.session_state.extracted_text, num_q)
                             st.session_state.quiz_submitted = False
                             st.session_state.quiz_ref += 1
                             st.rerun()
                 
-                # 2. QUIZ FORM (Only if NOT submitted)
+                # 2. QUIZ FORM (Active)
                 elif not st.session_state.quiz_submitted:
-                    # Use dynamic key to ensure form is fresh
-                    with st.form(f"quiz_form_{st.session_state.quiz_ref}"):
+                    with st.form(f"quiz_f_{st.session_state.quiz_ref}"):
                         for i, q in enumerate(st.session_state.quiz_data):
                             st.markdown(f"**{i+1}. {q['question']}**")
-                            st.radio("Choose:", q['options'], key=f"q{i}_{st.session_state.quiz_ref}", index=None)
+                            st.radio("Select:", q['options'], key=f"q{i}_{st.session_state.quiz_ref}", index=None)
                         
-                        # SUBMIT & SAVE
                         if st.form_submit_button("Submit & Save"):
                             st.session_state.quiz_submitted = True
                             
@@ -453,18 +454,16 @@ def main_app():
                                 if user_choice == q['options'][q['answer']]:
                                     score += 1
                             
-                            # FORCE SAVE TO CLOUD
+                            # Save to Cloud
                             try:
                                 save_result_to_cloud(user_id, score, len(st.session_state.quiz_data), st.session_state.current_mood)
-                                st.success("✅ Score Saved to Cloud!")
-                            except Exception as e:
-                                st.error(f"Save Failed: {e}")
+                            except: pass
                             
                             st.rerun()
 
-                # 3. RESULTS (Show AFTER submission)
+                # 3. RESULTS (Read Only)
                 else:
-                    st.success("🎉 Quiz Completed!")
+                    st.success("🎉 Quiz Submitted!")
                     score = 0
                     for i, q in enumerate(st.session_state.quiz_data):
                         user_choice = st.session_state.get(f"q{i}_{st.session_state.quiz_ref}")
@@ -475,17 +474,16 @@ def main_app():
                             score += 1
                             st.success(f"✅ Correct")
                         else:
-                            st.error(f"❌ Incorrect (Your Answer: {user_choice})")
+                            st.error(f"❌ Your Answer: {user_choice}")
                             st.info(f"👉 Correct Answer: **{correct_choice}**")
                         st.divider()
                     
                     st.metric("Final Score", f"{score}/{len(st.session_state.quiz_data)}")
                     
-                    # RESET BUTTON
-                    if st.button("🔄 Start Fresh Quiz"):
+                    # Only way to reset is via the main Source buttons now, as requested.
+                    if st.button("Close Quiz & Reset"):
                         st.session_state.quiz_data = []
                         st.session_state.quiz_submitted = False
-                        st.session_state.quiz_ref += 1
                         st.rerun()
             else:
                 st.info("Upload notes first.")
