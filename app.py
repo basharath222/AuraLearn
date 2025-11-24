@@ -33,10 +33,14 @@ def inject_css():
     <style>
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
         
-        /* --- HIDE STREAMLIT BRANDING (The "Credits") --- */
-        #MainMenu {{visibility: hidden;}} /* Hides the top-right hamburger menu */
-        footer {{visibility: hidden;}}    /* Hides "Made with Streamlit" footer */
-        header {{visibility: hidden;}}    /* Hides the top colored running bar */
+        /* --- HIDE STREAMLIT BRANDING (Aggressive) --- */
+        #MainMenu {{display: none !important;}}
+        footer {{display: none !important;}}
+        header {{display: none !important;}}
+        div[data-testid="stToolbar"] {{display: none !important;}}
+        .stDeployButton {{display: none !important;}}
+        [data-testid="stDecoration"] {{display: none !important;}}
+        [data-testid="stStatusWidget"] {{display: none !important;}}
         
         /* --- GLOBAL BUTTONS --- */
         /* We use a very specific selector to target ONLY standard buttons, not icons */
@@ -110,9 +114,7 @@ def inject_css():
 # ==========================
 # 3. FIREBASE SETUP (Cloud Compatible)
 # ==========================
-# ==========================
-# 3. FIREBASE SETUP (Cloud + Local Support)
-# ==========================
+
 # 1. Try to load from Streamlit Cloud Secrets
 if "firebase" in st.secrets:
     firebaseConfig = dict(st.secrets["firebase"])
@@ -636,7 +638,7 @@ def main_app():
         #     * **Data Processing:** PyPDF2 & PDFPlumber
         #     """)
 
-        st.divider()
+       
 
         # 5. FEEDBACK FORM (Integrated)
         st.subheader("💌 We Value Your Feedback")
