@@ -8,3 +8,4 @@ pdfplumber
 SpeechRecognition
 gTTS
 streamlit-mic-recorder
+setuptools

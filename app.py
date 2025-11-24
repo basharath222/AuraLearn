@@ -33,14 +33,10 @@ def inject_css():
     <style>
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
         
-        /* --- HIDE STREAMLIT BRANDING (Aggressive) --- */
-        #MainMenu {{display: none !important;}}
-        footer {{display: none !important;}}
-        header {{display: none !important;}}
-        div[data-testid="stToolbar"] {{display: none !important;}}
-        .stDeployButton {{display: none !important;}}
-        [data-testid="stDecoration"] {{display: none !important;}}
-        [data-testid="stStatusWidget"] {{display: none !important;}}
+        #MainMenu, footer, header, .stDeployButton {{ display: none !important; }}
+        div[data-testid="stToolbar"] {{ display: none !important; }}
+        [data-testid="stDecoration"] {{ display: none !important; }}
+        [data-testid="stStatusWidget"] {{ display: none !important; }}
         
         /* --- GLOBAL BUTTONS --- */
         /* We use a very specific selector to target ONLY standard buttons, not icons */
@@ -115,18 +111,47 @@ def inject_css():
 # 3. FIREBASE SETUP (Cloud Compatible)
 # ==========================
 
-# 1. Try to load from Streamlit Cloud Secrets
-if "firebase" in st.secrets:
-    firebaseConfig = dict(st.secrets["firebase"])
-# 2. If no secrets, try loading from Local JSON file
-else:
-    config_path = Path("config/firebase_config.json")
-    if config_path.exists():
-        with open(config_path) as f:
-            firebaseConfig = json.load(f)
+import os # Ensure this is imported at the top
+
+# ... (Your CSS and Imports remain the same)
+
+# ==========================
+# 3. FIREBASE SETUP (Universal: Secrets + Env Vars + Local)
+# ==========================
+try:
+    # 1. Try Streamlit Secrets (Streamlit Cloud)
+    if "firebase" in st.secrets:
+        firebaseConfig = dict(st.secrets["firebase"])
+    
+    # 2. Try Environment Variables (Render / Railway / Hugging Face)
+    # This allows you to deploy on any professional cloud platform
+    elif os.getenv("FIREBASE_API_KEY"):
+        firebaseConfig = {
+            "apiKey": os.getenv("FIREBASE_API_KEY"),
+            "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
+            "databaseURL": os.getenv("FIREBASE_DATABASE_URL"),
+            "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+            "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+            "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+            "appId": os.getenv("FIREBASE_APP_ID")
+        }
+    
+    # 3. Try Local File (Localhost)
     else:
-        st.error("❌ Configuration missing. Please set up Streamlit Secrets or add config/firebase_config.json")
-        st.stop()
+        config_path = Path("config/firebase_config.json")
+        if config_path.exists():
+            with open(config_path) as f:
+                firebaseConfig = json.load(f)
+        else:
+            st.error("❌ Configuration missing. Please set up Environment Variables or config file.")
+            st.stop()
+
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    auth = firebase.auth()
+    db = firebase.database()
+except Exception as e:
+    st.error(f"Connection Error: {e}")
+    st.stop()
 
 # Initialize Connection
 try:
