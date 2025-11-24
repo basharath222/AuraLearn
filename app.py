@@ -514,9 +514,7 @@ def main_app():
     # -------------------------
     # PAGE: ABOUT
     # -------------------------
-    # -------------------------
-    # PAGE: ABOUT
-    # -------------------------
+  
     elif nav == "About Project":
         st.title("🚀 About AuraLearn")
         

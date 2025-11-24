@@ -34,7 +34,13 @@ def load_history_from_cloud(user_id):
     try:
         history = db.child("users").child(user_id).child("history").get()
         if history.val():
-            return list(history.val().values())
+            data = history.val()
+            # FIX: Handle both List (if index keys) and Dict (if uuid keys)
+            if isinstance(data, list):
+                return [x for x in data if x is not None]
+            elif isinstance(data, dict):
+                return list(data.values())
         return []
-    except:
+    except Exception as e:
+        print(f"Load Error: {e}")
         return []

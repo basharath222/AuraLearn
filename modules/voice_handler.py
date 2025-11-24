@@ -42,6 +42,19 @@ def transcribe_audio_bytes(audio_bytes):
         print(f"Transcribe Error: {e}")
         return None
 
-# Keep this for local testing if needed, but cloud won't use it
 def listen_to_user():
-    return None
+    """Listens to microphone input (Optimized for speed)."""
+    r = sr.Recognizer()
+    # Lower threshold makes it pick up speech faster
+    r.energy_threshold = 300 
+    r.dynamic_energy_threshold = True
+    
+    with sr.Microphone() as source:
+        try:
+            print("Listening...")
+            # FIX: Reduced timeout significantly for snappier response
+            audio = r.listen(source, timeout=3, phrase_time_limit=4)
+            text = r.recognize_google(audio)
+            return text
+        except Exception as e:
+            return None
