@@ -16,7 +16,7 @@ from modules.quiz_generator import generate_quiz
 # ==========================
 # 1. PAGE CONFIG
 # ==========================
-st.set_page_config(page_title="AuraLearn Cloud", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="AuraLearn", page_icon="🧠", layout="wide")
 
 # ==========================
 # 2. THEME & CSS ENGINE
@@ -157,7 +157,7 @@ def auth_screen():
     inject_css()
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
-        st.title("🧠 AuraLearn Cloud")
+        st.title("🧠 AuraLearn ")
         st.caption("Secure Login via Firebase")
         
         tab1, tab2, tab3 = st.tabs(["Login", "Register", "Forgot Password"])
@@ -489,23 +489,68 @@ def main_app():
     # -------------------------
     # PAGE: ABOUT
     # -------------------------
+    # -------------------------
+    # PAGE: ABOUT
+    # -------------------------
     elif nav == "About Project":
         st.title("🚀 About AuraLearn")
+        
         st.markdown("""
-        ### **What is AuraLearn?**
-        AuraLearn is an intelligent, empathy-driven AI Tutoring Platform designed to make learning personalized and adaptive.
-        
-        ### **🌟 Unique Features**
-        1.  **🧠 Emotion-Adaptive Intelligence:**
-            * **Confused?** The AI auto-detects this and simplifies complex concepts using analogies.
-            * **Sleepy?** It generates physical/sensory wake-up activities instead of boring quizzes.
-        2.  **💬 Conversational Memory:** Chat with your PDF notes naturally. The AI remembers context.
-        3.  **📚 Document Mastery:** Upload any PDF, and the system instantly learns it to answer questions and generate quizzes.
-        4.  **☁️ Cloud Sync:** Your progress, badges, and history are saved securely in the cloud (Firebase).
-        5.  **🗣️ Voice Interaction:** Speak to your tutor and hear explanations read back to you.
-        
+        ### **🚀 What is AuraLearn?**
+        **AuraLearn** is an **Empathetic, Emotion-Adaptive AI Tutoring Platform** designed to solve the biggest problem in online education: **The "One-Size-Fits-All" Gap.**
+
         ---
-        *Built with Python, Streamlit, Firebase, and Llama 3.*
+
+        ### **🛑 The Problem**
+        Traditional online learning tools (like PDF readers, standard chatbots, or video lectures) are "blind."
+        * They don't know if you are **confused**, **bored**, or **falling asleep**.
+        * They keep delivering complex information even when your brain has stopped processing it.
+        * This leads to **learning fatigue**, **low retention**, and eventual dropout.
+
+        ### **✅ The AuraLearn Solution**
+        AuraLearn bridges this gap by adding an **Emotional Intelligence Layer** to AI. It doesn't just deliver content; it **adapts** its teaching strategy in real-time based on your mental state.
+
+        It transforms a static PDF into a **dynamic, living classroom** where the teacher (AI) actually cares about how you feel.
+
+        ---
+
+        ### **🌟 Key Features & Innovations**
+
+        #### **1. 🧠 Emotion-Adaptive RAG (Retrieval-Augmented Generation)**
+        Unlike standard AI wrappers, AuraLearn changes *how* it speaks based on your mood:
+        * **🤔 Confused Mode:** The AI detects your confusion and instantly switches to "ELI5" (Explain Like I'm 5) mode, using simple analogies and breaking down complex jargon from your notes.
+        * **😴 Sleepy Mode:** The system detects fatigue and pauses the lesson to trigger a **"Brain Boost"**—a physical or sensory wake-up call (e.g., "Stand up and stretch!")—before continuing.
+        * **😃 Happy/Ready Mode:** The AI challenges you with deeper questions to maximize your flow state.
+
+        #### **2. 🗣️ Bi-Directional Voice Interaction**
+        Learning isn't just about reading. AuraLearn features:
+        * **Voice Input:** Ask questions naturally using your microphone.
+        * **Audio Explanations:** The AI reads answers aloud, creating an immersive podcast-like learning experience.
+
+        #### **3. 📚 Instant Document Mastery**
+        * Upload any **PDF** (textbooks, lecture notes, research papers).
+        * The system instantly indexes the content, allowing you to chat with your document, generate summaries, and extract key concepts on demand.
+
+        #### **4. ☁️ Cloud Sync & Gamification**
+        * **Firebase Integration:** All your progress, chat history, and uploaded notes are securely saved in the cloud.
+        * **Smart Dashboard:** Tracks your learning trends over time.
+        * **Badges:** Earn achievements like *"Scholar"*, *"Sharpshooter"*, and *"Unstoppable"* to keep you motivated.
+
+        #### **5. 📝 Dynamic Assessment**
+        * Generates **context-aware quizzes** directly from your uploaded material.
+        * Provides instant feedback and saves your scores to track improvement.
+
+        ---
+
+        ### **💻 Tech Stack**
+        * **Frontend:** Streamlit (Python)
+        * **AI Engine:** Groq (Llama 3 70B) + LangChain
+        * **Backend & Auth:** Google Firebase (Realtime Database)
+        * **Speech:** SpeechRecognition (STT) & gTTS (Text-to-Speech)
+        * **Data Processing:** PyPDF2 & PDFPlumber
+
+        ---
+        *AuraLearn is not just a study tool; it is a tutor that listens, adapts, and grows with you.*
         """)
 
 # ==========================
