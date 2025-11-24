@@ -425,19 +425,25 @@ def main_app():
 
         with t2:
             if st.session_state.extracted_text:
-                # 1. GENERATE QUIZ (Clean Start)
+                # 1. GENERATE SETTINGS (If no quiz exists)
                 if not st.session_state.quiz_data:
-                    st.write("### Generate Quiz")
-                    num_q = st.slider("Number of questions:", min_value=3, max_value=10, value=5)
+                    st.subheader("Generate Quiz")
+                    
+                    # --- NEW: Difficulty & Count Inputs ---
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        num_q = st.number_input("Number of Questions", min_value=3, max_value=20, value=5)
+                    with c2:
+                        diff = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=1) # Index 1 = Medium default
                     
                     if st.button("Generate Cloud Quiz", type="primary"):
-                        with st.spinner("Creating..."):
-                            st.session_state.quiz_data = generate_quiz(st.session_state.extracted_text, num_q)
+                        with st.spinner(f"Creating {diff} Quiz..."):
+                            st.session_state.quiz_data = generate_quiz(st.session_state.extracted_text, num_q, diff)
                             st.session_state.quiz_submitted = False
                             st.session_state.quiz_ref += 1
                             st.rerun()
                 
-                # 2. QUIZ FORM (Active)
+                # 2. QUIZ FORM (Only if NOT submitted)
                 elif not st.session_state.quiz_submitted:
                     with st.form(f"quiz_f_{st.session_state.quiz_ref}"):
                         for i, q in enumerate(st.session_state.quiz_data):
@@ -454,14 +460,13 @@ def main_app():
                                 if user_choice == q['options'][q['answer']]:
                                     score += 1
                             
-                            # Save to Cloud
-                            try:
-                                save_result_to_cloud(user_id, score, len(st.session_state.quiz_data), st.session_state.current_mood)
-                            except: pass
-                            
+                            # --- FIX: EXPLICIT SAVE ---
+                            save_result_to_cloud(user_id, score, len(st.session_state.quiz_data), st.session_state.current_mood)
+                            st.toast("✅ Score Saved to Cloud!")
+                            time.sleep(1) # Wait for save
                             st.rerun()
 
-                # 3. RESULTS (Read Only)
+                # 3. RESULTS (Show AFTER submission)
                 else:
                     st.success("🎉 Quiz Submitted!")
                     score = 0
@@ -474,20 +479,20 @@ def main_app():
                             score += 1
                             st.success(f"✅ Correct")
                         else:
-                            st.error(f"❌ Your Answer: {user_choice}")
+                            st.error(f"❌ Incorrect (Your Answer: {user_choice})")
                             st.info(f"👉 Correct Answer: **{correct_choice}**")
                         st.divider()
                     
                     st.metric("Final Score", f"{score}/{len(st.session_state.quiz_data)}")
                     
-                    # Only way to reset is via the main Source buttons now, as requested.
-                    if st.button("Close Quiz & Reset"):
+                    # Simple Close Button
+                    if st.button("Close & Reset"):
                         st.session_state.quiz_data = []
                         st.session_state.quiz_submitted = False
+                        st.session_state.quiz_ref += 1
                         st.rerun()
             else:
                 st.info("Upload notes first.")
-
     # -------------------------
     # PAGE: PROGRESS
     # -------------------------

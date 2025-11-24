@@ -12,7 +12,10 @@ def get_firebase():
 
 def save_result_to_cloud(user_id, score, total, mood):
     firebase = get_firebase()
-    if not firebase: return
+    if not firebase: 
+        print("Firebase not initialized")
+        return
+    
     db = firebase.database()
     data = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -22,23 +25,28 @@ def save_result_to_cloud(user_id, score, total, mood):
         "percentage": round((score/total)*100, 1)
     }
     try:
+        # Pushing to /users/{user_id}/history
         db.child("users").child(user_id).child("history").push(data)
+        print("Data saved successfully")
     except Exception as e:
         print(f"Save Error: {e}")
 
 def load_history_from_cloud(user_id):
     firebase = get_firebase()
     if not firebase: return []
+    
     db = firebase.database()
     try:
-        # Get data (Returns a Dictionary or None)
+        # Fetch data
         data = db.child("users").child(user_id).child("history").get().val()
         
         if not data: return []
             
-        # Convert Firebase Dictionary to List
+        # Handle Firebase Dictionary format (random keys) -> List
         if isinstance(data, dict):
             return list(data.values())
+        
+        # Handle List format
         elif isinstance(data, list):
             return [x for x in data if x is not None]
             
