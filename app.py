@@ -106,17 +106,29 @@ def inject_css():
     """, unsafe_allow_html=True)
 
 # ==========================
-# 3. FIREBASE SETUP
+# 3. FIREBASE SETUP (Cloud + Local Support)
 # ==========================
-config_path = Path("config/firebase_config.json")
-if not config_path.exists():
-    st.error("❌ Configuration missing. Please add config/firebase_config.json")
-    st.stop()
+# 1. Try to load from Streamlit Cloud Secrets
+if "firebase" in st.secrets:
+    firebaseConfig = dict(st.secrets["firebase"])
+# 2. If no secrets, try loading from Local JSON file
+else:
+    config_path = Path("config/firebase_config.json")
+    if config_path.exists():
+        with open(config_path) as f:
+            firebaseConfig = json.load(f)
+    else:
+        st.error("❌ Configuration missing. Please set up Streamlit Secrets or add config/firebase_config.json")
+        st.stop()
 
-with open(config_path) as f: firebaseConfig = json.load(f)
-firebase = pyrebase.initialize_app(firebaseConfig)
-auth = firebase.auth()
-db = firebase.database() 
+# Initialize Connection
+try:
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    auth = firebase.auth()
+    db = firebase.database()
+except Exception as e:
+    st.error(f"Firebase Connection Error: {e}")
+    st.stop()
 
 # ==========================
 # 4. SESSION STATE
