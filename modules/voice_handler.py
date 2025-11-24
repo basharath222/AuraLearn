@@ -4,7 +4,7 @@ import tempfile
 import os
 import io
 
-# Engine Setup (Same as before)
+# Text to Speech
 def text_to_audio_file(text):
     try:
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
@@ -17,44 +17,34 @@ def text_to_audio_file(text):
         print(f"TTS Error: {e}")
         return None
 
-# === NEW FUNCTION FOR CLOUD ===
+# Cloud Transcriber (Fast)
 def transcribe_audio_bytes(audio_bytes):
-    """
-    Transcribes audio from a byte stream (Browser recording)
-    instead of a hardware microphone.
-    """
     r = sr.Recognizer()
     try:
-        # Create a temporary WAV file from the bytes
+        # Convert web audio bytes to WAV
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
             tmp_file.write(audio_bytes)
             tmp_path = tmp_file.name
         
-        # Process the file
         with sr.AudioFile(tmp_path) as source:
-            audio_data = r.record(source)
+            # Listen for a maximum of 5 seconds to keep it snappy
+            audio_data = r.record(source, duration=5) 
             text = r.recognize_google(audio_data)
             
-        # Clean up
         os.remove(tmp_path)
         return text
-    except Exception as e:
-        print(f"Transcribe Error: {e}")
+    except:
         return None
 
+# Local Transcriber (Fallback)
 def listen_to_user():
-    """Listens to microphone input (Optimized for speed)."""
     r = sr.Recognizer()
-    # Lower threshold makes it pick up speech faster
     r.energy_threshold = 300 
     r.dynamic_energy_threshold = True
-    
     with sr.Microphone() as source:
         try:
-            print("Listening...")
-            # FIX: Reduced timeout significantly for snappier response
+            # Short timeout for faster response
             audio = r.listen(source, timeout=3, phrase_time_limit=4)
             text = r.recognize_google(audio)
             return text
-        except Exception as e:
-            return None
+        except: return None

@@ -348,58 +348,57 @@ def main_app():
             with c_chat:
                 st.subheader(f"Chat ({st.session_state.current_mood.upper()})")
                 
-                # 1. AI Response Area (PERSISTENT)
+                # 1. Persistent Audio & Answer
                 if st.session_state.last_bot_answer:
                     st.markdown(f"<div class='ai-response'><b>🧠 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
                     
-                    # CHAT AUDIO (Always Visible)
+                    # Keep Chat Audio Visible (Paused if Tutor Message is active)
                     if st.session_state.chat_audio_path:
-                        st.markdown("**Audio Explanation:**")
+                        st.caption("Audio Explanation:")
                         try:
-                            st.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=True)
+                            # Only autoplay if the flag is set AND we are not in a Sleepy/Confused interruption
+                            should_play = st.session_state.force_autoplay and not st.session_state.tutor_message
+                            st.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=should_play)
+                            if should_play: st.session_state.force_autoplay = False
                         except:
                             st.audio(st.session_state.chat_audio_path, format="audio/mp3")
 
-                # 2. Input Container
+                # 2. Input Area (Fixed Layout)
                 input_container = st.container()
-                col_mic, col_text = input_container.columns([1, 6])
+                c1, c2 = input_container.columns([1, 8], gap="small") # Adjusted ratio for better look
                 
-                with col_mic:
-                    st.write("") 
-                    st.write("") 
-                    # --- BROWSER MICROPHONE (Cloud Compatible) ---
-                    # This replaces st.button("🎙️")
-                    audio_data = mic_recorder(
-                        start_prompt="🎙️",
-                        stop_prompt="⏹️",
-                        key='recorder',
-                        format="wav",
-                        use_container_width=True
-                    )
+                with c1:
+                    # CLOUD MIC RECORDER (Invisible styling wrapper)
+                    st.write("") # Spacer to align with text box
+                    st.write("")
+                    audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="wav", use_container_width=True)
                     
-                    # If recording finishes, transcribe immediately
                     if audio_data:
                         from modules.voice_handler import transcribe_audio_bytes
-                        transcribed_text = transcribe_audio_bytes(audio_data['bytes'])
-                        if transcribed_text:
-                            st.session_state.last_user_question = transcribed_text
-                            st.rerun() # Refresh to show text in box
-                
-                with col_text:
-                    q_val = st.session_state.get("last_user_question", "")
-                    user_q = st.text_input("Ask a doubt...", value=q_val, label_visibility="hidden", placeholder="Type or Speak...")
+                        text = transcribe_audio_bytes(audio_data['bytes'])
+                        if text:
+                            st.session_state.last_user_question = text
+                            st.toast(f"🗣️ You said: {text}") # Visual feedback
+                            st.rerun()
 
-                # 3. Explain Button
+                with c2:
+                    q_val = st.session_state.get("last_user_question", "")
+                    user_q = st.text_input("Ask a doubt...", value=q_val, label_visibility="hidden", placeholder="Type or use Mic...")
+
                 if st.button("✨ Explain It", type="primary", use_container_width=True):
                     if st.session_state.extracted_text and user_q:
                         st.session_state.last_user_question = user_q
+                        # Clear tutor message to focus on new question
+                        st.session_state.tutor_message = ""
+                        
                         with st.spinner("Thinking..."):
                             ans = explain_with_emotion(st.session_state.extracted_text[:3000], user_q, st.session_state.current_mood)
                             st.session_state.last_bot_answer = ans
                             st.session_state.chat_audio_path = text_to_audio_file(ans.replace("*", ""))
+                            st.session_state.force_autoplay = True
                             st.rerun()
                     else:
-                        st.warning("Please upload notes.")
+                        st.warning("Please upload notes first.")
 
         with t2:
             if st.session_state.extracted_text:
@@ -515,7 +514,7 @@ def main_app():
     # PAGE: ABOUT
     # -------------------------
   
-    elif nav == "About Project":
+    elif nav == "About AuraLearn":
         st.title("🚀 About AuraLearn")
         
         st.markdown("""

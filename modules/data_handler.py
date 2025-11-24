@@ -32,15 +32,19 @@ def load_history_from_cloud(user_id):
     if not firebase: return []
     db = firebase.database()
     try:
-        history = db.child("users").child(user_id).child("history").get()
-        if history.val():
-            data = history.val()
-            # FIX: Handle both List (if index keys) and Dict (if uuid keys)
-            if isinstance(data, list):
-                return [x for x in data if x is not None]
-            elif isinstance(data, dict):
-                return list(data.values())
+        # Get data
+        data = db.child("users").child(user_id).child("history").get().val()
+        
+        if not data:
+            return []
+            
+        # Handle both Dictionary (Firebase default) and List formats
+        if isinstance(data, dict):
+            return list(data.values())
+        elif isinstance(data, list):
+            return [x for x in data if x is not None]
+            
         return []
     except Exception as e:
-        print(f"Load Error: {e}")
+        print(f"History Load Error: {e}")
         return []
