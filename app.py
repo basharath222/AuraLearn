@@ -32,6 +32,7 @@ def inject_css():
     st.markdown(f"""
     <style>
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
+        
         /* --- HIDE STREAMLIT BRANDING (The "Credits") --- */
         #MainMenu {{visibility: hidden;}} /* Hides the top-right hamburger menu */
         footer {{visibility: hidden;}}    /* Hides "Made with Streamlit" footer */
@@ -584,7 +585,7 @@ def main_app():
         # 1. HERO SECTION
         st.markdown("""
         ### **Where AI Meets Empathy**
-        **AuraLearn** is the world's first **Emotion-Adaptive AI Tutoring Platform**. We believe that education shouldn't just be about transferring information—it should be about understanding the student.
+        **AuraLearn** is an **Emotion-Adaptive AI Tutoring Platform**. We believe that education shouldn't just be about transferring information—it should be about understanding the student.
         
         Unlike standard chatbots that treat every user the same, AuraLearn uses **Affective Computing** to detect your mental state and adapt its teaching strategy in real-time.
         """)
@@ -625,15 +626,15 @@ def main_app():
         
         st.divider()
         
-        # 4. TECH STACK
-        with st.expander("🛠️ Under the Hood (Tech Stack)"):
-            st.markdown("""
-            * **Frontend:** Streamlit (Python)
-            * **AI Engine:** Groq (Llama 3 70B) + LangChain
-            * **Backend & Auth:** Google Firebase (Realtime Database)
-            * **Voice:** SpeechRecognition (STT) & gTTS (Text-to-Speech)
-            * **Data Processing:** PyPDF2 & PDFPlumber
-            """)
+        # # 4. TECH STACK
+        # with st.expander("🛠️ Under the Hood (Tech Stack)"):
+        #     st.markdown("""
+        #     * **Frontend:** Streamlit (Python)
+        #     * **AI Engine:** Groq (Llama 3 70B) + LangChain
+        #     * **Backend & Auth:** Google Firebase (Realtime Database)
+        #     * **Voice:** SpeechRecognition (STT) & gTTS (Text-to-Speech)
+        #     * **Data Processing:** PyPDF2 & PDFPlumber
+        #     """)
 
         st.divider()
 
