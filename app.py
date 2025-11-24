@@ -5,6 +5,7 @@ import time
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+from streamlit_mic_recorder import mic_recorder
 
 # Modules
 from modules.pdf_processor import extract_text_from_pdf
@@ -16,7 +17,7 @@ from modules.quiz_generator import generate_quiz
 # ==========================
 # 1. PAGE CONFIG
 # ==========================
-st.set_page_config(page_title="AuraLearn Cloud", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="AuraLearn", page_icon="🧠", layout="wide")
 
 # ==========================
 # 2. THEME & CSS ENGINE
@@ -31,10 +32,14 @@ def inject_css():
     st.markdown(f"""
     <style>
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
+        /* --- HIDE STREAMLIT BRANDING (The "Credits") --- */
+        #MainMenu {{visibility: hidden;}} /* Hides the top-right hamburger menu */
+        footer {{visibility: hidden;}}    /* Hides "Made with Streamlit" footer */
+        header {{visibility: hidden;}}    /* Hides the top colored running bar */
         
-        /* GLOBAL BUTTONS (Apply Gradient) */
-        /* We use :not() to ensure we don't color the password toggle */
-        .stButton > button, div[data-testid="stForm"] button:not([aria-label="Show password"]) {{
+        /* --- GLOBAL BUTTONS --- */
+        /* We use a very specific selector to target ONLY standard buttons, not icons */
+        .stButton > button {{
             background: {aura_gradient} !important;
             color: white !important;
             border: none !important;
@@ -45,24 +50,24 @@ def inject_css():
             transition: 0.3s;
             box-shadow: 0 4px 15px rgba(159, 90, 240, 0.3);
         }}
-        
-        .stButton > button:hover, div[data-testid="stForm"] button:not([aria-label="Show password"]):hover {{ 
+        .stButton > button:hover {{ 
             transform: scale(1.02); 
             box-shadow: 0 6px 20px rgba(159, 90, 240, 0.6);
         }}
-        
-        /* --- FIX PASSWORD EYE ICON (Force Default/Transparent) --- */
+
+        /* --- FIX PASSWORD EYE ICON --- */
+        /* Force the eye button to be transparent */
         button[aria-label="Show password"] {{
-            background: transparent !important;
+            background-color: transparent !important;
             border: none !important;
-            box-shadow: none !important;
             color: inherit !important;
+            box-shadow: none !important;
         }}
         button[aria-label="Show password"]:hover {{
-            background: transparent !important;
+            background-color: transparent !important;
         }}
 
-        /* EMOTION BUTTONS */
+        /* --- EMOTION BUTTONS --- */
         div[data-testid="column"] .stButton > button {{
             background: #181825 !important; 
             color: #e0e0e0 !important; 
@@ -76,27 +81,23 @@ def inject_css():
             color: white !important;
         }}
         
-        /* TUTOR MESSAGE BOX */
+        /* UI CARDS */
         .tutor-box {{
             background: #13131f; padding: 20px; border-radius: 15px;
             border-left: 5px solid #3cd7f6; margin: 20px 0;
             animation: fadeIn 0.5s; color: #e0e0e0;
         }}
-        
-        /* BOOST CARD */
         .boost-card {{ 
             background: linear-gradient(135deg, #2e1a47 0%, #4a1c40 100%);
             padding: 25px; border-radius: 15px;
             border: 2px solid #ff6ac6; color: white; margin: 20px 0;
         }}
-
-        /* AI RESPONSE */
         .ai-response {{
             background-color: #1e1e2e; padding: 20px; border-radius: 12px;
             border-left: 5px solid #9f5af0; margin-top: 20px; color: white;
         }}
 
-        /* TEXT INPUT */
+        /* INPUT FIELDS */
         .stTextInput > div > div > input {{
             background-color: #181825 !important; color: white !important; border-radius: 10px; border: 1px solid #555;
         }}
@@ -106,29 +107,28 @@ def inject_css():
     """, unsafe_allow_html=True)
 
 # ==========================
-# 3. FIREBASE SETUP (Cloud + Local Support)
+# 3. FIREBASE SETUP (Cloud Compatible)
 # ==========================
-# 1. Try to load from Streamlit Cloud Secrets
-if "firebase" in st.secrets:
-    firebaseConfig = dict(st.secrets["firebase"])
-# 2. If no secrets, try loading from Local JSON file
-else:
-    config_path = Path("config/firebase_config.json")
-    if config_path.exists():
-        with open(config_path) as f:
-            firebaseConfig = json.load(f)
-    else:
-        st.error("❌ Configuration missing. Please set up Streamlit Secrets or add config/firebase_config.json")
-        st.stop()
-
-# Initialize Connection
 try:
+    # 1. Try loading from Streamlit Secrets (Cloud)
+    if "firebase" in st.secrets:
+        firebaseConfig = dict(st.secrets["firebase"])
+    # 2. Try loading from Local JSON (Localhost)
+    else:
+        config_path = Path("config/firebase_config.json")
+        if config_path.exists():
+            with open(config_path) as f:
+                firebaseConfig = json.load(f)
+        else:
+            st.error("Firebase config not found in Secrets or local file.")
+            st.stop()
+
     firebase = pyrebase.initialize_app(firebaseConfig)
     auth = firebase.auth()
     db = firebase.database()
 except Exception as e:
-    st.error(f"Firebase Connection Error: {e}")
-    st.stop()
+    st.error(f"Database Connection Error: {e}")
+    st.stop() 
 
 # ==========================
 # 4. SESSION STATE
@@ -140,10 +140,9 @@ if "extracted_text" not in st.session_state: st.session_state.extracted_text = "
 if "current_mood" not in st.session_state: st.session_state.current_mood = "neutral"
 if "tutor_message" not in st.session_state: st.session_state.tutor_message = ""
 
-# AUDIO PATHS
+# AUDIO (Independent channels)
 if "chat_audio_path" not in st.session_state: st.session_state.chat_audio_path = None
 if "tutor_audio_path" not in st.session_state: st.session_state.tutor_audio_path = None
-if "audio_autoplay_flag" not in st.session_state: st.session_state.audio_autoplay_flag = False
 
 if "quiz_data" not in st.session_state: st.session_state.quiz_data = []
 if "quiz_submitted" not in st.session_state: st.session_state.quiz_submitted = False
@@ -159,12 +158,12 @@ def auth_screen():
     inject_css()
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
-        st.title("🧠 AuraLearn Cloud")
+        st.title("🧠 AuraLearn ")
         st.caption("Secure Login via Firebase")
         
         tab1, tab2, tab3 = st.tabs(["Login", "Register", "Forgot Password"])
         
-        # --- LOGIN ---
+        # LOGIN
         with tab1:
             with st.form("login"):
                 email = st.text_input("Email")
@@ -172,22 +171,32 @@ def auth_screen():
                 submit = st.form_submit_button("Sign In")
                 
                 if submit:
+                    # 1. Attempt Login Logic
+                    user_obj = None
+                    error_msg = None
+                    
                     try:
-                        user = auth.sign_in_with_email_and_password(email, password)
-                        st.session_state.user = user
+                        user_obj = auth.sign_in_with_email_and_password(email, password)
+                    except Exception as e:
+                        error_msg = "Login failed. Please check your credentials."
+
+                    # 2. Handle Result OUTSIDE the try block to prevent weird UI states
+                    if user_obj:
+                        st.session_state.user = user_obj
                         try:
-                            uid = user['localId']
+                            uid = user_obj['localId']
                             profile = db.child("users").child(uid).child("profile").get().val()
                             st.session_state.username_display = profile['username'] if profile else email.split('@')[0]
                         except:
                             st.session_state.username_display = email.split('@')[0]
-
+                        
                         st.success("Welcome back!")
                         time.sleep(0.5)
                         st.rerun()
-                    except: st.error("Login failed. Check credentials.")
+                    else:
+                        st.error(error_msg)
         
-        # --- REGISTER ---
+        # REGISTER
         with tab2:
             with st.form("signup"):
                 new_username = st.text_input("Username (for Profile)")
@@ -207,7 +216,7 @@ def auth_screen():
                             st.success("Account created! Please login.")
                         except Exception as e: st.error(f"Error: {e}")
 
-        # --- FORGOT PASSWORD ---
+        # FORGOT PASSWORD
         with tab3:
             st.info("ℹ️ Check Spam folder if email doesn't appear.")
             reset_email = st.text_input("Enter your email")
@@ -232,19 +241,14 @@ def main_app():
         st.rerun()
 
     with st.sidebar:
-        st.title("👤 Profile")
+        st.title("Let's Learn!")
         st.write(f"**{st.session_state.username_display}**")
         st.divider()
-        nav = st.radio("Navigation", ["Classroom", "Progress & Badges", "About Project"])
+        nav = st.radio("Navigation", ["Classroom", "Progress & Badges", "About AuraLearn"])
         st.divider()
         if st.button("Logout"):
             st.session_state.clear()
             st.rerun()
-
-    # AUDIO STOP LOGIC (Pause if leaving Classroom)
-    if nav != "Classroom":
-        st.session_state.tutor_audio_path = None
-        # Note: We do NOT clear chat_audio_path here so it persists if you come back
 
     # -------------------------
     # PAGE: CLASSROOM
@@ -261,8 +265,9 @@ def main_app():
             st.session_state.tutor_message = "" 
             st.session_state.tutor_audio_path = None 
             
-            # === FIX: DO NOT CLEAR CHAT AUDIO PATH HERE ===
-            # This ensures the explanation audio stays visible even if you click sleepy
+            # === FIX: STOP PREVIOUS AUDIO ===
+            # This line wipes the explanation audio so it doesn't overlap
+            st.session_state.chat_audio_path = None 
             
             if mood == "confused":
                 with st.spinner("🧠 Teacher is simplifying..."):
@@ -277,15 +282,15 @@ def main_app():
 
                     if st.session_state.tutor_message:
                         st.session_state.tutor_audio_path = text_to_audio_file(st.session_state.tutor_message.replace("*", ""))
-                        st.session_state.audio_autoplay_flag = True # Autoplay the TUTOR message only
+                        st.session_state.force_autoplay = True
             
             elif mood == "sleepy" and st.session_state.extracted_text:
                 with st.spinner("Generating Energy Booster..."):
                     act = generate_quick_activity(st.session_state.extracted_text)
-                    st.session_state.tutor_message = f"**⚡ ENERGY BOOST:**\n\n{act}"
+                    st.session_state.tutor_message = f"⚡ ENERGY BOOST :\n\n{act}"
                     st.session_state.tutor_audio_path = text_to_audio_file(act)
-                    st.session_state.audio_autoplay_flag = True # Autoplay the WAKE UP message
-
+                    st.session_state.force_autoplay = True
+                    # st.session_state.tutor_audio_key = time.time()
         with col1: 
             if st.button("🙂 Ready", use_container_width=True): trigger_mood("neutral")
         with col2: 
@@ -295,24 +300,18 @@ def main_app():
         with col4: 
             if st.button("😃 Happy", use_container_width=True): trigger_mood("happy")
 
-        # 2. TUTOR MESSAGE (TOP)
+        # 2. TUTOR MESSAGE (WAKE UP / CONFUSED)
         if st.session_state.tutor_message:
             style = "boost-card" if st.session_state.current_mood == "sleepy" else "tutor-box"
             st.markdown(f"<div class='{style}'>{st.session_state.tutor_message}</div>", unsafe_allow_html=True)
             
-            # TUTOR AUDIO (Wake Up / Simplify)
+            # TUTOR AUDIO (No key to avoid crash on old Streamlit)
             if st.session_state.tutor_audio_path:
-                tutor_place = st.empty()
-                # Only auto-play if the flag is TRUE (newly generated)
-                if st.session_state.audio_autoplay_flag:
-                    try:
-                        tutor_place.audio(st.session_state.tutor_audio_path, format="audio/mp3", autoplay=True)
-                    except:
-                        tutor_place.audio(st.session_state.tutor_audio_path, format="audio/mp3")
-                    # Turn off flag so it doesn't replay on refresh
-                    st.session_state.audio_autoplay_flag = False 
-                else:
-                    tutor_place.audio(st.session_state.tutor_audio_path, format="audio/mp3")
+                # Try to use autoplay if supported, else just show
+                try:
+                    st.audio(st.session_state.tutor_audio_path, format="audio/mp3", autoplay=True)
+                except:
+                    st.audio(st.session_state.tutor_audio_path, format="audio/mp3")
 
         # 3. LEARNING AREA
         t1, t2 = st.tabs(["📚 Study Material", "📝 Quiz"])
@@ -342,56 +341,62 @@ def main_app():
             with c_chat:
                 st.subheader(f"Chat ({st.session_state.current_mood.upper()})")
                 
-                # AI Response Area (PERSISTENT)
+                # 1. AI Response Area (PERSISTENT)
                 if st.session_state.last_bot_answer:
                     st.markdown(f"<div class='ai-response'><b>🧠 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
                     
                     # CHAT AUDIO (Always Visible)
                     if st.session_state.chat_audio_path:
                         st.markdown("**Audio Explanation:**")
-                        chat_audio_box = st.empty()
-                        # Use autoplay if flag is set AND we aren't playing a tutor message
-                        should_autoplay = st.session_state.audio_autoplay_flag and not st.session_state.tutor_message
-                        
                         try:
-                            if should_autoplay:
-                                chat_audio_box.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=True)
-                                st.session_state.audio_autoplay_flag = False
-                            else:
-                                chat_audio_box.audio(st.session_state.chat_audio_path, format="audio/mp3")
+                            st.audio(st.session_state.chat_audio_path, format="audio/mp3", autoplay=True)
                         except:
-                             chat_audio_box.audio(st.session_state.chat_audio_path, format="audio/mp3")
+                            st.audio(st.session_state.chat_audio_path, format="audio/mp3")
 
+                # 2. Input Container
                 input_container = st.container()
                 col_mic, col_text = input_container.columns([1, 6])
+                
                 with col_mic:
                     st.write("") 
                     st.write("") 
-                    if st.button("🎙️", help="Speak"):
-                        txt = listen_to_user()
-                        if txt: st.session_state.last_user_question = txt
+                    # --- BROWSER MICROPHONE (Cloud Compatible) ---
+                    # This replaces st.button("🎙️")
+                    audio_data = mic_recorder(
+                        start_prompt="🎙️",
+                        stop_prompt="⏹️",
+                        key='recorder',
+                        format="wav",
+                        use_container_width=True
+                    )
+                    
+                    # If recording finishes, transcribe immediately
+                    if audio_data:
+                        from modules.voice_handler import transcribe_audio_bytes
+                        transcribed_text = transcribe_audio_bytes(audio_data['bytes'])
+                        if transcribed_text:
+                            st.session_state.last_user_question = transcribed_text
+                            st.rerun() # Refresh to show text in box
                 
                 with col_text:
                     q_val = st.session_state.get("last_user_question", "")
                     user_q = st.text_input("Ask a doubt...", value=q_val, label_visibility="hidden", placeholder="Type or Speak...")
 
+                # 3. Explain Button
                 if st.button("✨ Explain It", type="primary", use_container_width=True):
                     if st.session_state.extracted_text and user_q:
                         st.session_state.last_user_question = user_q
-                        # Clear previous tutor message to focus on chat
-                        st.session_state.tutor_message = "" 
-                        
                         with st.spinner("Thinking..."):
                             ans = explain_with_emotion(st.session_state.extracted_text[:3000], user_q, st.session_state.current_mood)
                             st.session_state.last_bot_answer = ans
                             st.session_state.chat_audio_path = text_to_audio_file(ans.replace("*", ""))
-                            st.session_state.audio_autoplay_flag = True
                             st.rerun()
                     else:
                         st.warning("Please upload notes.")
 
         with t2:
             if st.session_state.extracted_text:
+                # 1. GENERATE BUTTON
                 if not st.session_state.quiz_data:
                     if st.button("Generate Cloud Quiz", type="primary"):
                         with st.spinner("Creating..."):
@@ -400,6 +405,7 @@ def main_app():
                             st.session_state.quiz_ref += 1
                             st.rerun()
                 
+                # 2. QUIZ FORM
                 elif not st.session_state.quiz_submitted:
                     with st.form(f"quiz_f_{st.session_state.quiz_ref}"):
                         for i, q in enumerate(st.session_state.quiz_data):
@@ -418,6 +424,7 @@ def main_app():
                             except: pass
                             st.rerun()
 
+                # 3. RESULTS
                 else:
                     st.success("🎉 Quiz Submitted & Saved!")
                     score = 0
@@ -435,14 +442,14 @@ def main_app():
                     
                     st.metric("Final Score", f"{score}/{len(st.session_state.quiz_data)}")
                     
-                    if st.button("🔄 Generate New Questions"):
-                        with st.spinner("Refreshing..."):
-                            st.session_state.quiz_data = [] 
-                            new_q = generate_quiz(st.session_state.extracted_text)
-                            st.session_state.quiz_data = new_q
-                            st.session_state.quiz_submitted = False
-                            st.session_state.quiz_ref += 1
-                            st.rerun()
+                    # if st.button("🔄 Generate New Questions"):
+                    #     with st.spinner("Refreshing..."):
+                    #         st.session_state.quiz_data = [] 
+                    #         new_q = generate_quiz(st.session_state.extracted_text)
+                    #         st.session_state.quiz_data = new_q
+                    #         st.session_state.quiz_submitted = False
+                    #         st.session_state.quiz_ref += 1
+                    #         st.rerun()
             else:
                 st.info("Upload notes first.")
 
@@ -500,23 +507,63 @@ def main_app():
     # -------------------------
     # PAGE: ABOUT
     # -------------------------
+    # -------------------------
+    # PAGE: ABOUT
+    # -------------------------
     elif nav == "About Project":
         st.title("🚀 About AuraLearn")
+        
         st.markdown("""
-        ### **What is AuraLearn?**
-        AuraLearn is an intelligent, empathy-driven AI Tutoring Platform designed to make learning personalized and adaptive.
-        
-        ### **🌟 Unique Features**
-        1.  **🧠 Emotion-Adaptive Intelligence:**
-            * **Confused?** The AI auto-detects this and simplifies complex concepts using analogies.
-            * **Sleepy?** It generates physical/sensory wake-up activities instead of boring quizzes.
-        2.  **💬 Conversational Memory:** Chat with your PDF notes naturally. The AI remembers context.
-        3.  **📚 Document Mastery:** Upload any PDF, and the system instantly learns it to answer questions and generate quizzes.
-        4.  **☁️ Cloud Sync:** Your progress, badges, and history are saved securely in the cloud (Firebase).
-        5.  **🗣️ Voice Interaction:** Speak to your tutor and hear explanations read back to you.
-        
+        ### **🚀 What is AuraLearn?**
+        **AuraLearn** is an **Empathetic, Emotion-Adaptive AI Tutoring Platform** designed to solve the biggest problem in online education: **The "One-Size-Fits-All" Gap.**
+
         ---
-        *Built with Python, Streamlit, Firebase, and Llama 3.*
+
+        ### **🛑 The Problem**
+        Traditional online learning tools (like PDF readers, standard chatbots, or video lectures) are "blind."
+        * They don't know if you are **confused**, **bored**, or **falling asleep**.
+        * They keep delivering complex information even when your brain has stopped processing it.
+        * This leads to **learning fatigue**, **low retention**, and eventual dropout.
+
+        ### **✅ The AuraLearn Solution**
+        AuraLearn bridges this gap by adding an **Emotional Intelligence Layer** to AI. It doesn't just deliver content; it **adapts** its teaching strategy in real-time based on your mental state.
+
+        It transforms a static PDF into a **dynamic, living classroom** where the teacher (AI) actually cares about how you feel.
+
+        ---
+
+        ### **🌟 Key Features & Innovations**
+
+        #### **1. 🧠 Emotion-Adaptive RAG (Retrieval-Augmented Generation)**
+        Unlike standard AI wrappers, AuraLearn changes *how* it speaks based on your mood:
+        * **🤔 Confused Mode:** The AI detects your confusion and instantly switches to "ELI5" (Explain Like I'm 5) mode, using simple analogies and breaking down complex jargon from your notes.
+        * **😴 Sleepy Mode:** The system detects fatigue and pauses the lesson to trigger a **"Brain Boost"**—a physical or sensory wake-up call (e.g., "Stand up and stretch!")—before continuing.
+        * **😃 Happy/Ready Mode:** The AI challenges you with deeper questions to maximize your flow state.
+
+        #### **2. 🗣️ Bi-Directional Voice Interaction**
+        Learning isn't just about reading. AuraLearn features:
+        * **Voice Input:** Ask questions naturally using your microphone.
+        * **Audio Explanations:** The AI reads answers aloud, creating an immersive podcast-like learning experience.
+
+        #### **3. 📚 Instant Document Mastery**
+        * Upload any **PDF** (textbooks, lecture notes, research papers).
+        * The system instantly indexes the content, allowing you to chat with your document, generate summaries, and extract key concepts on demand.
+
+        #### **4. ☁️ Cloud Sync & Gamification**
+        * **Firebase Integration:** All your progress, chat history, and uploaded notes are securely saved in the cloud.
+        * **Smart Dashboard:** Tracks your learning trends over time.
+        * **Badges:** Earn achievements like *"Scholar"*, *"Sharpshooter"*, and *"Unstoppable"* to keep you motivated.
+
+        #### **5. 📝 Dynamic Assessment**
+        * Generates **context-aware quizzes** directly from your uploaded material.
+        * Provides instant feedback and saves your scores to track improvement.
+
+        ---
+
+        
+
+        ---
+        *AuraLearn is not just a study tool; it is a tutor that listens, adapts, and grows with you.*
         """)
 
 # ==========================
