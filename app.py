@@ -346,7 +346,7 @@ def main_app():
                         st.session_state.quiz_submitted = False
                         st.rerun()
                 else:
-                    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+                    uploaded_file = st.file_uploader("Upload File", type=["pdf","txt","md","docx","pptx","xlsx","csv"])
                     if uploaded_file:
                         with st.spinner("Processing..."):
                             text = extract_text_from_pdf(uploaded_file)
@@ -443,7 +443,7 @@ def main_app():
                     with c2:
                         diff = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=1) # Index 1 = Medium default
                     
-                    if st.button("Generate Cloud Quiz", type="primary"):
+                    if st.button("Generate Quiz", type="primary"):
                         with st.spinner(f"Creating {diff} Quiz..."):
                             st.session_state.quiz_data = generate_quiz(st.session_state.extracted_text, num_q, diff)
                             st.session_state.quiz_submitted = False
@@ -469,7 +469,7 @@ def main_app():
                             
                             # --- FIX: EXPLICIT SAVE ---
                             save_result_to_cloud(user_id, score, len(st.session_state.quiz_data), st.session_state.current_mood)
-                            st.toast("✅ Score Saved to Cloud!")
+                            st.toast("✅ Score Successfully Saved!")
                             time.sleep(1) # Wait for save
                             st.rerun()
 
@@ -575,61 +575,76 @@ def main_app():
     # PAGE: ABOUT
     # -------------------------
   
+    # -------------------------
+    # PAGE: ABOUT
+    # -------------------------
     elif nav == "About AuraLearn":
         st.title("🚀 About AuraLearn")
         
+        # 1. HERO SECTION
         st.markdown("""
-        ### **🚀 What is AuraLearn?**
-        **AuraLearn** is an **Empathetic, Emotion-Adaptive AI Tutoring Platform** designed to solve the biggest problem in online education: **The "One-Size-Fits-All" Gap.**
-
-        ---
-
-        ### **🛑 The Problem**
-        Traditional online learning tools (like PDF readers, standard chatbots, or video lectures) are "blind."
-        * They don't know if you are **confused**, **bored**, or **falling asleep**.
-        * They keep delivering complex information even when your brain has stopped processing it.
-        * This leads to **learning fatigue**, **low retention**, and eventual dropout.
-
-        ### **✅ The AuraLearn Solution**
-        AuraLearn bridges this gap by adding an **Emotional Intelligence Layer** to AI. It doesn't just deliver content; it **adapts** its teaching strategy in real-time based on your mental state.
-
-        It transforms a static PDF into a **dynamic, living classroom** where the teacher (AI) actually cares about how you feel.
-
-        ---
-
-        ### **🌟 Key Features & Innovations**
-
-        #### **1. 🧠 Emotion-Adaptive RAG (Retrieval-Augmented Generation)**
-        Unlike standard AI wrappers, AuraLearn changes *how* it speaks based on your mood:
-        * **🤔 Confused Mode:** The AI detects your confusion and instantly switches to "ELI5" (Explain Like I'm 5) mode, using simple analogies and breaking down complex jargon from your notes.
-        * **😴 Sleepy Mode:** The system detects fatigue and pauses the lesson to trigger a **"Brain Boost"**—a physical or sensory wake-up call (e.g., "Stand up and stretch!")—before continuing.
-        * **😃 Happy/Ready Mode:** The AI challenges you with deeper questions to maximize your flow state.
-
-        #### **2. 🗣️ Bi-Directional Voice Interaction**
-        Learning isn't just about reading. AuraLearn features:
-        * **Voice Input:** Ask questions naturally using your microphone.
-        * **Audio Explanations:** The AI reads answers aloud, creating an immersive podcast-like learning experience.
-
-        #### **3. 📚 Instant Document Mastery**
-        * Upload any **PDF** (textbooks, lecture notes, research papers).
-        * The system instantly indexes the content, allowing you to chat with your document, generate summaries, and extract key concepts on demand.
-
-        #### **4. ☁️ Cloud Sync & Gamification**
-        * **Firebase Integration:** All your progress, chat history, and uploaded notes are securely saved in the cloud.
-        * **Smart Dashboard:** Tracks your learning trends over time.
-        * **Badges:** Earn achievements like *"Scholar"*, *"Sharpshooter"*, and *"Unstoppable"* to keep you motivated.
-
-        #### **5. 📝 Dynamic Assessment**
-        * Generates **context-aware quizzes** directly from your uploaded material.
-        * Provides instant feedback and saves your scores to track improvement.
-
-        ---
-
+        ### **Where AI Meets Empathy**
+        **AuraLearn** is the world's first **Emotion-Adaptive AI Tutoring Platform**. We believe that education shouldn't just be about transferring information—it should be about understanding the student.
         
-
-        ---
-        *AuraLearn is not just a study tool; it is a tutor that listens, adapts, and grows with you.*
+        Unlike standard chatbots that treat every user the same, AuraLearn uses **Affective Computing** to detect your mental state and adapt its teaching strategy in real-time.
         """)
+        
+        st.divider()
+
+        # 2. THE PROBLEM & SOLUTION
+        c1, c2 = st.columns(2)
+        with c1:
+            st.info("🛑 **The Problem**")
+            st.markdown("""
+            Traditional online learning is **"blind."**
+            * PDF readers and video lectures don't know if you are confused, bored, or falling asleep.
+            * They keep delivering complex info even when you've stopped processing it.
+            * This leads to **learning fatigue** and low retention.
+            """)
+        
+        with c2:
+            st.success("✅ **The AuraLearn Solution**")
+            st.markdown("""
+            We add an **Emotional Intelligence Layer** to AI.
+            * **Confused?** The AI simplifies concepts using analogies (ELI5).
+            * **Sleepy?** It stops the lesson to run a physical "Brain Boost" activity.
+            * **Happy?** It challenges you to flow deeper into the topic.
+            """)
+
+        st.divider()
+
+        # 3. KEY CAPABILITIES
+        st.subheader("🌟 System Capabilities")
+        
+        st.markdown("""
+        * **📚 Instant Document Mastery:** Upload any PDF textbook, and AuraLearn ingests it instantly for Q&A and Quizzing.
+        * **🗣️ Bi-Directional Voice:** Speak to your tutor naturally and hear human-like audio explanations.
+        * **🧠 Cognitive State Tracking:** The system remembers your confusion points and adjusts future quizzes to target your weak spots.
+        * **☁️ Cloud Sync:** Your progress, badges, and chat history are saved securely in the cloud via Firebase.
+        """)
+        
+        st.divider()
+        
+        # 4. TECH STACK
+        with st.expander("🛠️ Under the Hood (Tech Stack)"):
+            st.markdown("""
+            * **Frontend:** Streamlit (Python)
+            * **AI Engine:** Groq (Llama 3 70B) + LangChain
+            * **Backend & Auth:** Google Firebase (Realtime Database)
+            * **Voice:** SpeechRecognition (STT) & gTTS (Text-to-Speech)
+            * **Data Processing:** PyPDF2 & PDFPlumber
+            """)
+
+        st.divider()
+
+        # 5. FEEDBACK FORM (Integrated)
+        st.subheader("💌 We Value Your Feedback")
+        st.write("Help us improve AuraLearn! Share your experience, report bugs, or suggest features.")
+        
+        # Display as a styled link button
+        st.link_button("📝 Fill out Feedback Form", "https://docs.google.com/forms/d/e/1FAIpQLSftRzHkjcZSlfU8knlO6gGlumZWCYsCC7pFxdT-g2_IlDUOaw/viewform")
+
+        st.caption("© 2025 AuraLearn Project. Built for the Future of Education.")
 
 # ==========================
 # 7. RUN
