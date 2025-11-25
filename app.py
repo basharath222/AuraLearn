@@ -116,54 +116,50 @@ import os # Ensure this is imported at the top
 # ... (Your CSS and Imports remain the same)
 
 # ==========================
-# 3. FIREBASE SETUP (Universal: Secrets + Env Vars + Local)
+# 3. FIREBASE SETUP (Universal: Cloud + Local)
 # ==========================
-try:
-    # 1. Try Streamlit Secrets (Streamlit Cloud)
-    if "firebase" in st.secrets:
-        firebaseConfig = dict(st.secrets["firebase"])
-    
-    # 2. Try Environment Variables (Render / Railway / Hugging Face)
-    # This allows you to deploy on any professional cloud platform
-    elif os.getenv("FIREBASE_API_KEY"):
-        firebaseConfig = {
-            "apiKey": os.getenv("FIREBASE_API_KEY"),
-            "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
-            "databaseURL": os.getenv("FIREBASE_DATABASE_URL"),
-            "projectId": os.getenv("FIREBASE_PROJECT_ID"),
-            "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
-            "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
-            "appId": os.getenv("FIREBASE_APP_ID")
-        }
-    
-    # 3. Try Local File (Localhost)
-    else:
-        config_path = Path("config/firebase_config.json")
-        if config_path.exists():
-            with open(config_path) as f:
-                firebaseConfig = json.load(f)
-        else:
-            st.error("❌ Configuration missing. Please set up Environment Variables or config file.")
-            st.stop()
+import os
 
-    firebase = pyrebase.initialize_app(firebaseConfig)
-    auth = firebase.auth()
-    db = firebase.database()
-except Exception as e:
-    st.error(f"Connection Error: {e}")
-    st.stop()
+firebaseConfig = None
 
-# Initialize Connection
-try:
-    firebase = pyrebase.initialize_app(firebaseConfig)
-    auth = firebase.auth()
-    db = firebase.database()
-except Exception as e:
-    st.error(f"Firebase Connection Error: {e}")
+# 1. Try Environment Variables (Render)
+if os.getenv("FIREBASE_API_KEY"):
+    firebaseConfig = {
+        "apiKey": os.getenv("FIREBASE_API_KEY"),
+        "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
+        "databaseURL": os.getenv("FIREBASE_DATABASE_URL"),
+        "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+        "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+        "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+        "appId": os.getenv("FIREBASE_APP_ID")
+    }
+
+# 2. Try Streamlit Secrets (Streamlit Cloud) - Wrapped in try/except to prevent crash
+if not firebaseConfig:
+    try:
+        if "firebase" in st.secrets:
+            firebaseConfig = dict(st.secrets["firebase"])
+    except: pass # File not found, ignore
+
+# 3. Try Local File (Localhost)
+if not firebaseConfig:
+    config_path = Path("config/firebase_config.json")
+    if config_path.exists():
+        with open(config_path) as f:
+            firebaseConfig = json.load(f)
+
+# Initialize
+if firebaseConfig:
+    try:
+        firebase = pyrebase.initialize_app(firebaseConfig)
+        auth = firebase.auth()
+        db = firebase.database()
+    except Exception as e:
+        st.error(f"Firebase Init Error: {e}")
+        st.stop()
+else:
+    st.error("❌ Configuration missing. Please set Environment Variables in Render.")
     st.stop()
-except Exception as e:
-    st.error(f"Database Connection Error: {e}")
-    st.stop() 
 
 # ==========================
 # 4. SESSION STATE

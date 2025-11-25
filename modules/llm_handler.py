@@ -9,30 +9,21 @@ load_dotenv()
 # --- ROBUST KEY LOADING ---
 GROQ_API_KEY = None
 
-# 1. Try loading from Environment Variable (Render / Local .env)
-# This is the standard way for Render.
+# 1. Try Environment Variable (Render)
 if os.getenv("GROQ_API_KEY"):
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# 2. If not found, try Streamlit Secrets (Streamlit Cloud)
-# We wrap this in try/except because accessing st.secrets crashes if no file exists.
+# 2. Try Streamlit Secrets (Safety Check)
 if not GROQ_API_KEY:
     try:
         if "GROQ_API_KEY" in st.secrets:
             GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-    except:
-        pass # Secrets file not found, ignore.
+    except: pass
 
-# 3. Final Check
-if not GROQ_API_KEY:
-    # Only show error if we are trying to use AI features
-    print("⚠️ GROQ_API_KEY not found. AI features will fail.")
-
-# Initialize Groq client (Handle missing key gracefully to prevent startup crash)
+# Initialize Client
+client = None
 if GROQ_API_KEY:
     client = Groq(api_key=GROQ_API_KEY)
-else:
-    client = None
 
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
