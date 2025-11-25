@@ -107,9 +107,7 @@ def inject_css():
     </style>
     """, unsafe_allow_html=True)
 
-# ==========================
-# 3. FIREBASE SETUP (Cloud Compatible)
-# ==========================
+
 
 import os # Ensure this is imported at the top
 
