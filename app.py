@@ -17,7 +17,12 @@ from modules.quiz_generator import generate_quiz
 # ==========================
 # 1. PAGE CONFIG
 # ==========================
-st.set_page_config(page_title="AuraLearn", page_icon="🧠", layout="wide")
+st.set_page_config(
+    page_title="AuraLearn Cloud", 
+    page_icon="🧠", 
+    layout="wide", 
+    initial_sidebar_state="expanded"
+)
 
 # ==========================
 # 2. THEME & CSS ENGINE
@@ -282,9 +287,7 @@ def main_app():
     # -------------------------
     # PAGE: CLASSROOM
     # -------------------------
-    # -------------------------
-    # PAGE: CLASSROOM
-    # -------------------------
+    
     if nav == "Classroom":
         st.title("Interactive Classroom")
 
@@ -489,21 +492,21 @@ def main_app():
                                 if user_choice == q['options'][q['answer']]:
                                     score += 1
                             
-                            # --- FIX: EXPLICIT SAVE ---
-                            # FORCE SAVE TO CLOUD (Now with Token!)
+                            # --- FIX: PASS TOKEN TO SAVE ---
                             try:
                                 token = st.session_state.user['idToken'] # Get Token
                                 save_result_to_cloud(
                                     user_id, 
                                     score, 
                                     len(st.session_state.quiz_data), 
-                                    st.session_state.current_mood, 
-                                    token # <--- Pass it here
+                                    st.session_state.current_mood,
+                                    token # <--- Passed here
                                 )
                                 st.success("✅ Score Saved to Cloud!")
                             except Exception as e:
                                 st.error(f"Save Failed: {e}")
-                            time.sleep(1) # Wait for save
+                            
+                            time.sleep(1)
                             st.rerun()
 
                 # 3. RESULTS (Show AFTER submission)
@@ -537,17 +540,21 @@ def main_app():
     # -------------------------
     # PAGE: PROGRESS
     # -------------------------
+    # -------------------------
+    # PAGE: PROGRESS
+    # -------------------------
     elif nav == "Progress & Badges":
-        st.session_state.last_nav = "Progress" # Mark page switch
         st.title("🏆 Your Achievement Hub")
+        
+        # 1. LOAD DATA (With Token)
+        history = []
         try:
             token = st.session_state.user['idToken'] # Get Token
-            history = load_history_from_cloud(user_id, token) # <--- Pass it here
+            history = load_history_from_cloud(user_id, token) # <--- Passed here
         except Exception as e:
-            history = []
             st.warning(f"Could not sync: {e}")
-        # 1. ROBUST DATA LOADING
-        history = []
+            history = []
+            
         try:
             # Direct DB call to debug
             raw_data = db.child("users").child(user_id).child("history").get()
