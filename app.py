@@ -539,41 +539,25 @@ def main_app():
     # -------------------------
     # PAGE: PROGRESS
     # -------------------------
-    # -------------------------
-    # PAGE: PROGRESS
-    # -------------------------
+
     elif nav == "Progress & Badges":
         st.title("🏆 Your Achievement Hub")
         
-        # 1. LOAD DATA (With Token)
+        # FIX: Reset quiz if user navigates away so it doesn't auto-submit later
+        st.session_state.quiz_submitted = False
+        st.session_state.quiz_data = []
+        
+        # 1. Load Data with Token
         history = []
         try:
             token = st.session_state.user['idToken'] # Get Token
-            history = load_history_from_cloud(user_id, token) # <--- Passed here
+            history = load_history_from_cloud(user_id, token)
         except Exception as e:
-            st.warning(f"Could not sync: {e}")
-            history = []
-
-        try:
-            # Direct DB call to debug
-            raw_data = db.child("users").child(user_id).child("history").get()
-            if raw_data and raw_data.val():
-                data = raw_data.val()
-                # Handle Dictionary (Firebase default) vs List
-                if isinstance(data, dict):
-                    history = list(data.values())
-                elif isinstance(data, list):
-                    history = [x for x in data if x is not None]
-        except Exception as e:
-            st.error(f"Sync Error: {e}")
+            st.warning(f"Syncing... {e}")
         
         if history:
-            try:
-                df = pd.DataFrame(history)
-                # Ensure columns exist
-                if 'timestamp' not in df.columns: df['timestamp'] = datetime.now()
-                if 'percentage' not in df.columns: df['percentage'] = 0
-                
+            df = pd.DataFrame(history)
+            if 'timestamp' in df.columns:
                 df['timestamp'] = pd.to_datetime(df['timestamp'])
                 total_sessions = len(df)
                 avg_score = df['percentage'].mean()
@@ -610,8 +594,8 @@ def main_app():
                     st.bar_chart(df['date'].value_counts())
                     with st.expander("View Full History"):
                         st.dataframe(df.sort_values(by='timestamp', ascending=False))
-            except Exception as e:
-                st.error(f"Data Format Error: {e}")
+            # except Exception as e:
+                # st.error(f"Data Format Error: {e}")
         else:
             st.info("Start learning to earn badges! (No data found)")
 

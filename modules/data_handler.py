@@ -39,28 +39,26 @@ def save_result_to_cloud(user_id, score, total, mood, token):
     # Pass the token to prove identity!
     db.child("users").child(user_id).child("history").push(data, token=token)
 
-def load_history_from_cloud(user_id, token):
+def load_history_from_cloud(user_id, token=None):
     """
-    Loads data using the User's Auth Token.
+    Loads data using the User's Auth Token to bypass security rules.
     """
     firebase = get_firebase()
     if not firebase: return []
-    
     db = firebase.database()
     try:
-        # Pass the token to read private data!
-        history = db.child("users").child(user_id).child("history").get(token=token).val()
+        # FIX: Added token=token to prove identity
+        data = db.child("users").child(user_id).child("history").get(token=token).val()
         
-        if not history: return []
+        if not data:
+            return []
             
-        # Handle List vs Dict format
-        if isinstance(history, dict):
-            return list(history.val().values()) # Pyrebase sometimes returns val() wrapper
-        if isinstance(history, list):
-            return [x for x in history if x is not None]
+        if isinstance(data, dict):
+            return list(data.values())
+        elif isinstance(data, list):
+            return [x for x in data if x is not None]
             
-        # Direct dictionary values
-        return list(history.values())
+        return []
     except Exception as e:
-        print(f"Load Error: {e}")
+        print(f"History Load Error: {e}")
         return []
