@@ -591,10 +591,10 @@ def main_app():
                     if total_sessions >= 1: st.success("🎓 **Novice**\n\n1st Session")
                     else: st.info("🔒 **Novice**\n\nComplete 1 session")
                 with c2:
-                    if total_sessions >= 5: st.success("🚀 **Scholar**\n\n5 Sessions")
+                    if total_sessions >= 10: st.success("🚀 **Scholar**\n\n5 Sessions")
                     else: st.info(f"🔒 **Scholar**\n\n{5-total_sessions} to go")
                 with c3:
-                    if total_sessions >= 10: st.success("👑 **Master**\n\n10 Sessions")
+                    if total_sessions >= 100: st.success("👑 **Master**\n\n10 Sessions")
                     else: st.info(f"🔒 **Master**\n\n{10-total_sessions} to go")
                 
                 st.write("")
@@ -603,10 +603,10 @@ def main_app():
                     if avg_score >= 90: st.success("🧠 **Genius**\n\nAvg > 90%")
                     else: st.info("🔒 **Genius**\n\nGet >90% Avg")
                 with c5:
-                    if perfect_scores >= 1: st.success("🎯 **Sharpshooter**\n\n100% Score")
+                    if perfect_scores >= 5: st.success("🎯 **Sharpshooter**\n\n100% Score")
                     else: st.info("🔒 **Sharpshooter**\n\nGet 100% once")
                 with c6:
-                    if total_sessions >= 20: st.success("🔥 **Unstoppable**\n\n20 Sessions")
+                    if total_sessions >= 200: st.success("🔥 **Unstoppable**\n\n20 Sessions")
                     else: st.info("🔒 **Unstoppable**\n\nKeep going!")
 
                 st.divider()
@@ -621,9 +621,6 @@ def main_app():
         else:
             st.info("Start learning to earn badges! (No data found)")
 
-    # -------------------------
-    # PAGE: ABOUT
-    # -------------------------
   
     # -------------------------
     # PAGE: ABOUT
