@@ -18,7 +18,7 @@ from modules.quiz_generator import generate_quiz
 # 1. PAGE CONFIG
 # ==========================
 st.set_page_config(
-    page_title="AuraLearn Cloud", 
+    page_title="AuraLearn", 
     page_icon="🧠", 
     layout="wide", 
     initial_sidebar_state="expanded"
@@ -266,30 +266,30 @@ def main_app():
     inject_css()
     try:
         user_id = st.session_state.user['localId']
-        token = st.session_state.user['idToken'] # <--- Get Token
-        
-        # Fetch name if missing (using Token)
+        # Ensure username is loaded
         if not st.session_state.username_display:
-             profile = db.child("users").child(user_id).child("profile").get(token=token).val()
-             if profile and 'username' in profile:
-                 st.session_state.username_display = profile['username']
-             else:
-                 st.session_state.username_display = st.session_state.user['email'].split('@')[0]
+             profile = db.child("users").child(user_id).child("profile").get().val()
+             # Fallback to email if no username found
+             st.session_state.username_display = profile['username'] if profile else st.session_state.user['email'].split('@')[0]
     except:
         st.session_state.user = None
         st.rerun()
 
     with st.sidebar:
-        st.title("Let's Learn!")
-        # Display the fetched username
-        st.markdown(f"### 👤 {st.session_state.username_display}")
+        # --- UPDATE: SHOW PROFILE NAME AS TITLE ---
+        st.title(f"👤 {st.session_state.username_display}")
+        
         st.divider()
-        # ... rest of sidebar code ...
         nav = st.radio("Navigation", ["Classroom", "Progress & Badges", "About AuraLearn"])
         st.divider()
+        
         if st.button("Logout"):
             st.session_state.clear()
             st.rerun()
+
+    # AUDIO STOP LOGIC (Pause if leaving Classroom)
+    if nav != "Classroom":
+        st.session_state.tutor_audio_path = None
 
     # -------------------------
     # PAGE: CLASSROOM
@@ -509,7 +509,7 @@ def main_app():
                                     st.session_state.current_mood,
                                     token # <--- Passed here
                                 )
-                                st.success("✅ Score Saved to Cloud!")
+                                st.success("✅ Score Successfully Saved!")
                             except Exception as e:
                                 st.error(f"Save Failed: {e}")
                             
