@@ -6,27 +6,42 @@ from pathlib import Path
 import streamlit as st
 
 def get_firebase():
-    # 1. Cloud Secrets
-    if "firebase" in st.secrets:
-        config = dict(st.secrets["firebase"])
-    # 2. Local File
-    else:
-        config_path = Path("config/firebase_config.json")
-        if config_path.exists():
-            with open(config_path) as f:
-                config = json.load(f)
-        else:
-            print("DEBUG: Config file missing!")
-            return None
-    return pyrebase.initialize_app(config)
+    # 1. Try Environment Variables (Render / Universal Cloud)
+    # This checks if the keys you added in Render Dashboard exist
+    if os.getenv("FIREBASE_API_KEY"):
+        config = {
+            "apiKey": os.getenv("FIREBASE_API_KEY"),
+            "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
+            "databaseURL": os.getenv("FIREBASE_DATABASE_URL"),
+            "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+            "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+            "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+            "appId": os.getenv("FIREBASE_APP_ID")
+        }
+        return pyrebase.initialize_app(config)
 
-def save_result_to_cloud(user_id, score, total, mood, token):
+    # 2. Try Streamlit Secrets (Streamlit Cloud)
+    # We wrap this in try/except so it doesn't crash if the secrets file is missing
+    try:
+        if "firebase" in st.secrets:
+            config = dict(st.secrets["firebase"])
+            return pyrebase.initialize_app(config)
+    except:
+        pass
+
+    # 3. Try Local File (Localhost)
+    config_path = Path("config/firebase_config.json")
+    if config_path.exists():
+        with open(config_path) as f:
+            config = json.load(f)
+        return pyrebase.initialize_app(config)
+    
+    return None
+
+def save_result_to_cloud(user_id, score, total, mood, token=None):
     """Saves data using the User's Auth Token."""
-    print(f"DEBUG: Attempting to save for User {user_id}...")
     firebase = get_firebase()
-    if not firebase: 
-        print("DEBUG: Firebase init failed.")
-        return False
+    if not firebase: return False
     
     db = firebase.database()
     data = {
@@ -38,31 +53,29 @@ def save_result_to_cloud(user_id, score, total, mood, token):
     }
     
     try:
-        # Pass the token to write to protected DB
-        db.child("users").child(user_id).child("history").push(data, token=token)
-        print("DEBUG: Save SUCCESS!")
+        if token:
+            db.child("users").child(user_id).child("history").push(data, token=token)
+        else:
+            db.child("users").child(user_id).child("history").push(data)
         return True
     except Exception as e:
-        print(f"DEBUG: Save FAILED. Error: {e}")
+        print(f"Save Error: {e}")
         return False
 
-def load_history_from_cloud(user_id, token):
+def load_history_from_cloud(user_id, token=None):
     """Loads data using the User's Auth Token."""
-    print(f"DEBUG: Loading history for User {user_id}...")
     firebase = get_firebase()
     if not firebase: return []
     
     db = firebase.database()
     try:
-        # Pass the token to read protected DB
-        history = db.child("users").child(user_id).child("history").get(token=token).val()
+        if token:
+            history = db.child("users").child(user_id).child("history").get(token=token).val()
+        else:
+            history = db.child("users").child(user_id).child("history").get().val()
         
-        if not history: 
-            print("DEBUG: No history found (Empty).")
-            return []
+        if not history: return []
             
-        print(f"DEBUG: History loaded! Raw type: {type(history)}")
-        
         if isinstance(history, dict):
             return list(history.values())
         if isinstance(history, list):
@@ -70,5 +83,5 @@ def load_history_from_cloud(user_id, token):
             
         return []
     except Exception as e:
-        print(f"DEBUG: Load FAILED. Error: {e}")
+        print(f"Load Error: {e}")
         return []
