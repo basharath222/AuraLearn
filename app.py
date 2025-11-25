@@ -19,7 +19,7 @@ from modules.quiz_generator import generate_quiz
 # ==========================
 st.set_page_config(
     page_title="AuraLearn", 
-    page_icon="🧠", 
+    page_icon="🚀", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
@@ -333,7 +333,7 @@ def main_app():
             # st.session_state.chat_audio_path = None 
             
             if mood == "confused":
-                with st.spinner("👩🏻‍🏫 Teacher is simplifying..."):
+                with st.spinner("👩🏻 Teacher is simplifying..."):
                     if st.session_state.last_bot_answer:
                         simplified = simplify_previous_answer(st.session_state.last_bot_answer, st.session_state.last_user_question)
                         st.session_state.tutor_message = f"**Let me rephrase that:**\n\n{simplified}"

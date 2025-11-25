@@ -64,19 +64,81 @@ def explain_with_emotion(context_text: str, question: str, emotion: str) -> str:
     return _chat(messages, temperature=0.5)
 
 def simplify_concept(context_text: str):
-    """Confused Mode: Summarize notes simply"""
-    prompt = f"The student is CONFUSED. Explain the main idea as if talking to a 10-year-old. Use ONE clear analogy. Keep it under 60 words.\nNOTES: {context_text[:2500]}"
+    """
+    Confused Mode: Summarize notes simply.
+    ENHANCEMENT: Added persona, strict formatting constraints, and a "core truth" focus.
+    """
+    prompt = f"""
+    You are AuraLearn, an expert tutor who specializes in explaining complex topics to beginners.
+    The student is CONFUSED and struggling to understand the material.
+    
+    YOUR TASK:
+    1. Ignore all jargon and technical fluff.
+    2. Identify the ONE "core truth" or main idea from the notes below.
+    3. Explain that single idea using a relatable real-world analogy (e.g., cooking, driving, sports, or nature).
+    4. Speak directly to the student with empathy.
+    
+    CONSTRAINTS:
+    - Maximum 3 sentences.
+    - Maximum 60 words.
+    - NO headers (like "Analogy:" or "Summary:"). Just the explanation.
+    - Do NOT mention "the text says" or "the notes". Just teach the concept.
+    
+    NOTES CONTEXT:
+    {context_text[:3000]}
+    """
     messages = [{"role": "user", "content": prompt}]
-    return _chat(messages, temperature=0.6)
+    # Lower temp for focus, but high enough for good analogies
+    return _chat(messages, temperature=0.5)
 
 def simplify_previous_answer(previous_answer: str, question: str):
-    """Confused Mode: Simplify last answer"""
-    prompt = f"The student is CONFUSED by your last answer.\nQuestion: '{question}'\nYour Answer: '{previous_answer}'\nRe-explain simply (ELI5). Use a metaphor. Keep it under 50 words."
+    """
+    Confused Mode: Simplify last answer.
+    ENHANCEMENT: Forces the LLM to analyze *why* the previous answer failed (too complex) and fix it.
+    """
+    prompt = f"""
+    You are AuraLearn. The student is CONFUSED by your previous explanation because it was likely too technical or dry.
+    
+    User's Question: "{question}"
+    Your Previous (Confusing) Answer: "{previous_answer}"
+    
+    YOUR TASK:
+    1. Apologize briefly for the complexity (e.g., "That was a bit heavy, let me try again.").
+    2. Re-explain the specific answer using the "ELI5" (Explain Like I'm 5) technique.
+    3. Use a concrete metaphor to make it click.
+    
+    CONSTRAINTS:
+    - Maximum 50 words.
+    - Keep it conversational and warm.
+    - No bullet points.
+    """
     messages = [{"role": "user", "content": prompt}]
     return _chat(messages, temperature=0.6)
 
 def generate_quick_activity(context_text: str):
-    """Sleepy Mode: Wake up call"""
-    prompt = "The student is SLEEPY. Generate a 15-second PHYSICAL wake-up call (e.g. 'Stand up and stretch'). Do NOT ask a study question."
+    """
+    Sleepy Mode: Wake up call.
+    ENHANCEMENT: Forces variety (somatic, visual, breathing) and high energy to combat boredom.
+    """
+    prompt = f"""
+    The student is SLEEPY and their attention is drifting. They need a "Pattern Break" to reset their brain.
+    
+    YOUR TASK:
+    Generate ONE random, high-energy, 15-second physical or sensory challenge.
+    
+    Choose ONE of these types:
+    1. Somatic: "Stand up and shake your hands out!"
+    2. Visual: "Find 3 blue objects in your room right now."
+    3. Breathing: "Inhale for 4 seconds... hold... exhale for 4."
+    4. silly: "Try to touch your nose with your tongue."
+    
+    CONSTRAINTS:
+    - Do NOT ask a study question.
+    - Do NOT reference the notes context (unless to say "Let's take a break from [Topic]").
+    - Be imperative and energetic (Use exclamation marks!).
+    - Max 30 words.
+    
+    Context (Just for topic reference): "{context_text[:100]}..."
+    """
     messages = [{"role": "user", "content": prompt}]
     return _chat(messages, temperature=0.9)
