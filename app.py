@@ -259,31 +259,41 @@ def auth_screen():
                     st.success(f"Link sent to {reset_email}!")
                 except: st.error("Email not found.")
 
+
 # ==========================
 # 6. MAIN APPLICATION
 # ==========================
 def main_app():
+
     inject_css()
     try:
         user_id = st.session_state.user['localId']
-        token = st.session_state.user['idToken'] # <--- Get Token
         
-        # Fetch name if missing (using Token)
-        if not st.session_state.username_display:
-             profile = db.child("users").child(user_id).child("profile").get(token=token).val()
-             if profile and 'username' in profile:
-                 st.session_state.username_display = profile['username']
-             else:
-                 st.session_state.username_display = st.session_state.user['email'].split('@')[0]
+        # Always try to fetch the fresh profile name from DB
+        # This ensures we show the custom username, not just the email
+        try:
+            token = st.session_state.user['idToken']
+            profile = db.child("users").child(user_id).child("profile").get(token=token).val()
+            
+            if profile and 'username' in profile:
+                st.session_state.username_display = profile['username']
+            else:
+                # Fallback if DB read fails or username key missing
+                st.session_state.username_display = st.session_state.user['email'].split('@')[0]
+        except:
+             # Fallback if connection fails
+             st.session_state.username_display = st.session_state.user['email'].split('@')[0]
+
     except:
         st.session_state.user = None
         st.rerun()
 
     with st.sidebar:
         st.title("Let's Learn!")
-        # Display the fetched username
+        # This will now show the correct DB username
         st.markdown(f"### 👤 {st.session_state.username_display}")
         st.divider()
+        
         nav = st.radio("Navigation", ["Classroom", "Progress & Badges", "About AuraLearn"])
         st.divider()
         
