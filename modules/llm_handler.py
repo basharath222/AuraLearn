@@ -1,39 +1,52 @@
-# modules/llm_handler.py
 import os
+import streamlit as st
 from groq import Groq
 from dotenv import load_dotenv
-import streamlit as st
 
-# Load .env file
+# Load .env file (for local development)
 load_dotenv()
 
-# Inside modules/llm_handler.py
+# --- ROBUST KEY LOADING ---
+GROQ_API_KEY = None
 
-# Try getting key from Streamlit Secrets first, then Environment variable
-if "GROQ_API_KEY" in st.secrets:
-    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-else:
+# 1. Try loading from Environment Variable (Render / Local .env)
+# This is the standard way for Render.
+if os.getenv("GROQ_API_KEY"):
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# Initialize Groq client
-# If you are running locally and .env fails, you can paste your key string directly below:
-# client = Groq(api_key="gsk_...")
-client = Groq(api_key=GROQ_API_KEY)
+# 2. If not found, try Streamlit Secrets (Streamlit Cloud)
+# We wrap this in try/except because accessing st.secrets crashes if no file exists.
+if not GROQ_API_KEY:
+    try:
+        if "GROQ_API_KEY" in st.secrets:
+            GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+    except:
+        pass # Secrets file not found, ignore.
 
-# Using a fast model
+# 3. Final Check
+if not GROQ_API_KEY:
+    # Only show error if we are trying to use AI features
+    print("⚠️ GROQ_API_KEY not found. AI features will fail.")
+
+# Initialize Groq client (Handle missing key gracefully to prevent startup crash)
+if GROQ_API_KEY:
+    client = Groq(api_key=GROQ_API_KEY)
+else:
+    client = None
+
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
-def _chat(messages, temperature=0.3, max_tokens=1024):
-    """
-    Internal helper to call Groq API with a safety timeout.
-    """
+def _chat(messages, temperature=0.3, max_tokens=1024, timeout=30.0):
+    if not client:
+        return "⚠️ Error: GROQ_API_KEY not set in Render Environment Variables."
+        
     try:
         response = client.chat.completions.create(
             model=DEFAULT_MODEL,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            timeout=30.0  # <--- FIX: Wait up to 30 seconds before erroring
+            timeout=timeout
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -44,88 +57,44 @@ def _chat(messages, temperature=0.3, max_tokens=1024):
 # ==========================================
 
 def explain_with_emotion(context_text: str, question: str, emotion: str) -> str:
-    """
-    Explains a concept based on the user's mood.
-    """
     emotion_prompts = {
-        "confused": "Explain this step-by-step using simple analogies. Avoid jargon.",
-        "sleepy": "Keep the answer extremely short, punchy, and exciting. Use max 3 bullet points.",
-        "happy": "Give a detailed, enthusiastic explanation. Challenge the student slightly.",
-        "neutral": "Provide a clear, concise, academic explanation."
+        "confused": "Use a very simple analogy from daily life. Keep it under 3 sentences.",
+        "sleepy": "Be extremely punchy and exciting. Use short bullet points.",
+        "happy": "Go a bit deeper. You can use technical terms but explain them.",
+        "neutral": "Be clear and concise."
     }
-    
     style = emotion_prompts.get(emotion, emotion_prompts["neutral"])
 
     messages = [
-        {
-            "role": "system",
-            "content": (
-                f"You are AuraLearn, an empathetic AI tutor. {style} "
-                "Use the provided notes context to answer."
-            ),
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Context from Notes: {context_text}\n\n"
-                f"Student Question: {question}"
-            ),
-        },
+        {"role": "system", "content": f"You are AuraLearn, a helpful AI tutor. {style} Use the provided notes context to answer."},
+        {"role": "user", "content": f"Context: {context_text}\n\nQuestion: {question}"},
     ]
     return _chat(messages, temperature=0.5)
 
 def simplify_concept(context_text: str):
-    """
-    Called when user clicks 'Confused'. 
-    Summarizes the notes simply without a specific question.
-    """
     prompt = f"""
-    The student is CONFUSED and stuck.
-    Stop teaching normally. Instead:
-    1. Summarize the core concept of these notes in 3 very simple sentences.
-    2. Use a real-world analogy (like cars, cooking, or sports).
-    3. Be encouraging.
-    
-    NOTES CONTEXT:
-    {context_text[:2500]}
+    The student is CONFUSED. Explain the main idea as if talking to a 10-year-old.
+    Use ONE clear real-world analogy. Keep it conversational and under 60 words.
+    NOTES: {context_text[:2500]}
     """
     messages = [{"role": "user", "content": prompt}]
     return _chat(messages, temperature=0.6)
 
 def simplify_previous_answer(previous_answer: str, question: str):
-    """
-    Called when user is CONFUSED about a specific answer given by the AI.
-    """
     prompt = f"""
-    The student didn't understand your last explanation.
-    
-    User Question: "{question}"
-    Your Previous Answer: "{previous_answer}"
-    
-    Task:
-    
-    1. Re-explain the answer in a totally different, simpler way (EL15).
-    2. Use an analogy.
+    The student is CONFUSED by your last answer.
+    Question: "{question}"
+    Your Answer: "{previous_answer}"
+    Re-explain simply (ELI5). Use a metaphor. Keep it under 50 words.
     """
     messages = [{"role": "user", "content": prompt}]
     return _chat(messages, temperature=0.6)
 
 def generate_quick_activity(context_text: str):
-    """
-    Called when user clicks 'Sleepy'.
-    Generates a PHYSICAL wake-up call (ignoring context to focus on energy).
-    """
     prompt = f"""
-    The student is SLEEPY and bored.
-    Do NOT generate a quiz. 
-    Generate a 1-minute PHYSICAL or BREATHING challenge to wake them up.
-    
-    Examples:
-    - "Stand up and do 5 jumping jacks!"
-    - "Take a deep breath in for 4 seconds, hold for 4, out for 4."
-    - "Find something RED in your room."
-    
-    Keep it under 30 words. Be high energy!
+    The student is SLEEPY. Generate a 15-second PHYSICAL wake-up call.
+    Example: "Stand up and stretch!" or "Clap 5 times!".
+    Do NOT ask a study question.
     """
     messages = [{"role": "user", "content": prompt}]
     return _chat(messages, temperature=0.9)
