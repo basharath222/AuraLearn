@@ -38,10 +38,9 @@ def inject_css():
     <style>
         .stApp {{ background-color: {main_bg}; color: {text_color}; }}
         
-        #MainMenu, footer, header, .stDeployButton {{ display: none !important; }}
-        div[data-testid="stToolbar"] {{ display: none !important; }}
-        [data-testid="stDecoration"] {{ display: none !important; }}
-        [data-testid="stStatusWidget"] {{ display: none !important; }}
+        #MainMenu {{ visibility: hidden; }}
+        footer {{ visibility: hidden; }}
+        .stDeployButton {{ display: none; }}
         
         /* --- GLOBAL BUTTONS --- */
         /* We use a very specific selector to target ONLY standard buttons, not icons */
@@ -554,7 +553,7 @@ def main_app():
         except Exception as e:
             st.warning(f"Could not sync: {e}")
             history = []
-            
+
         try:
             # Direct DB call to debug
             raw_data = db.child("users").child(user_id).child("history").get()
