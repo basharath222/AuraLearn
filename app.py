@@ -191,7 +191,7 @@ def auth_screen():
     inject_css()
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
-        st.title("🧠 AuraLearn ")
+        st.title("🚀 AuraLearn ")
         st.caption("Secure Login via Firebase")
         
         tab1, tab2, tab3 = st.tabs(["Login", "Register", "Forgot Password"])
@@ -333,7 +333,7 @@ def main_app():
             # st.session_state.chat_audio_path = None 
             
             if mood == "confused":
-                with st.spinner("🧠 Teacher is simplifying..."):
+                with st.spinner("👩🏻‍🏫 Teacher is simplifying..."):
                     if st.session_state.last_bot_answer:
                         simplified = simplify_previous_answer(st.session_state.last_bot_answer, st.session_state.last_user_question)
                         st.session_state.tutor_message = f"**Let me rephrase that:**\n\n{simplified}"
@@ -406,7 +406,7 @@ def main_app():
                 
                 # 1. AI Response Area
                 if st.session_state.last_bot_answer:
-                    st.markdown(f"<div class='ai-response'><b>🧠 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='ai-response'><b>🔥 Aura:</b> {st.session_state.last_bot_answer}</div>", unsafe_allow_html=True)
                     
                     if st.session_state.chat_audio_path:
                         st.markdown("**Audio Explanation:**")
@@ -474,7 +474,7 @@ def main_app():
                             st.session_state.force_autoplay = True
                             st.rerun()
                     else:
-                        st.warning("Please upload notes first.")
+                        st.warning("Please upload notes and then enter your Query.")
 
         with t2:
             if st.session_state.extracted_text:
