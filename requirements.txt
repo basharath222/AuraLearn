@@ -10,3 +10,4 @@ gTTS
 streamlit-mic-recorder
 setuptools
 python-docx
+openpyxl

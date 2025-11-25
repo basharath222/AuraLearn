@@ -485,7 +485,7 @@ def main_app():
                     # --- NEW: Difficulty & Count Inputs ---
                     c1, c2 = st.columns(2)
                     with c1:
-                        num_q = st.number_input("Number of Questions", min_value=3, max_value=20, value=5)
+                        num_q = st.number_input("Number of Questions", min_value=3, max_value=100, value=5)
                     with c2:
                         diff = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=1) # Index 1 = Medium default
                     

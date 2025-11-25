@@ -1,12 +1,13 @@
 import pdfplumber
 import PyPDF2
 import pandas as pd
-import docx # NEW LIBRARY
+import docx
+from pptx import Presentation # NEW LIBRARY
 import io
 
 def extract_text_from_pdf(uploaded_file):
     """
-    Extracts text from various file types (PDF, DOCX, TXT, CSV, XLSX, XML).
+    Extracts text from various file types (PDF, DOCX, PPTX, TXT, CSV, XLSX, XML).
     Includes robust fallback for PDFs using pdfplumber and PyPDF2.
     """
     text = ""
@@ -38,7 +39,7 @@ def extract_text_from_pdf(uploaded_file):
             
             return text.strip() if text.strip() else "⚠️ PDF scanned or empty."
 
-        # 2. Handle DOCX (Word Documents) - NEW!
+        # 2. Handle DOCX (Word)
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             doc = docx.Document(uploaded_file)
             fullText = []
@@ -46,28 +47,38 @@ def extract_text_from_pdf(uploaded_file):
                 fullText.append(para.text)
             return '\n'.join(fullText)
 
-        # 3. Handle Text / Markdown
+        # 3. Handle PPTX (PowerPoint) - NEW!
+        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+            prs = Presentation(uploaded_file)
+            text_runs = []
+            for slide in prs.slides:
+                for shape in slide.shapes:
+                    if hasattr(shape, "text"):
+                        text_runs.append(shape.text)
+            return "\n".join(text_runs)
+
+        # 4. Handle Text / Markdown
         elif uploaded_file.type in ["text/plain", "text/markdown"]:
             return uploaded_file.read().decode("utf-8")
 
-        # 4. Handle CSV
+        # 5. Handle CSV
         elif uploaded_file.type == "text/csv":
             uploaded_file.seek(0)
             df = pd.read_csv(uploaded_file)
             return df.to_string()
 
-        # 5. Handle Excel
+        # 6. Handle Excel
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
             uploaded_file.seek(0)
             df = pd.read_excel(uploaded_file)
             return df.to_string()
         
-        # 6. Handle XML
+        # 7. Handle XML
         elif uploaded_file.type in ["text/xml", "application/xml"]:
             return uploaded_file.read().decode("utf-8")
 
         else:
-            return f"⚠️ Unsupported file type: {uploaded_file.type}. Please upload PDF, DOCX, TXT, CSV, or Excel."
+            return f"⚠️ Unsupported file type: {uploaded_file.type}. Please upload PDF, DOCX, PPTX, TXT, CSV, or Excel."
 
     except Exception as e:
         return f"⚠️ Error processing file: {str(e)}"
