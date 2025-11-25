@@ -490,8 +490,19 @@ def main_app():
                                     score += 1
                             
                             # --- FIX: EXPLICIT SAVE ---
-                            save_result_to_cloud(user_id, score, len(st.session_state.quiz_data), st.session_state.current_mood)
-                            st.toast("✅ Score Successfully Saved!")
+                            # FORCE SAVE TO CLOUD (Now with Token!)
+                            try:
+                                token = st.session_state.user['idToken'] # Get Token
+                                save_result_to_cloud(
+                                    user_id, 
+                                    score, 
+                                    len(st.session_state.quiz_data), 
+                                    st.session_state.current_mood, 
+                                    token # <--- Pass it here
+                                )
+                                st.success("✅ Score Saved to Cloud!")
+                            except Exception as e:
+                                st.error(f"Save Failed: {e}")
                             time.sleep(1) # Wait for save
                             st.rerun()
 
@@ -529,7 +540,12 @@ def main_app():
     elif nav == "Progress & Badges":
         st.session_state.last_nav = "Progress" # Mark page switch
         st.title("🏆 Your Achievement Hub")
-        
+        try:
+            token = st.session_state.user['idToken'] # Get Token
+            history = load_history_from_cloud(user_id, token) # <--- Pass it here
+        except Exception as e:
+            history = []
+            st.warning(f"Could not sync: {e}")
         # 1. ROBUST DATA LOADING
         history = []
         try:

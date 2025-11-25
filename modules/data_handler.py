@@ -1,34 +1,33 @@
 import pyrebase
 import json
 import os
-import streamlit as st
 from datetime import datetime
 from pathlib import Path
+import streamlit as st
 
-# Cloud-Compatible Firebase Init
-def get_db():
-    try:
-        # 1. Try Secrets (Cloud)
-        if "firebase" in st.secrets:
-            config = dict(st.secrets["firebase"])
-        # 2. Try Local File
+def get_firebase():
+    # Try Secrets (Cloud)
+    if "firebase" in st.secrets:
+        config = dict(st.secrets["firebase"])
+    # Try Local File
+    else:
+        config_path = Path("config/firebase_config.json")
+        if config_path.exists():
+            with open(config_path) as f:
+                config = json.load(f)
         else:
-            config_path = Path("config/firebase_config.json")
-            if config_path.exists():
-                with open(config_path) as f:
-                    config = json.load(f)
-            else:
-                return None
-        
-        firebase = pyrebase.initialize_app(config)
-        return firebase.database()
-    except:
-        return None
+            return None
+    
+    return pyrebase.initialize_app(config)
 
-def save_result_to_cloud(user_id, score, total, mood):
-    db = get_db()
-    if not db: return False # Failed to connect
-
+def save_result_to_cloud(user_id, score, total, mood, token):
+    """
+    Saves data using the User's Auth Token.
+    """
+    firebase = get_firebase()
+    if not firebase: return
+    
+    db = firebase.database()
     data = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "score": score,
@@ -37,25 +36,31 @@ def save_result_to_cloud(user_id, score, total, mood):
         "percentage": round((score/total)*100, 1)
     }
     
-    try:
-        db.child("users").child(user_id).child("history").push(data)
-        return True # Success
-    except Exception as e:
-        print(f"Save Error: {e}")
-        return False
+    # Pass the token to prove identity!
+    db.child("users").child(user_id).child("history").push(data, token=token)
 
-def load_history_from_cloud(user_id):
-    db = get_db()
-    if not db: return []
-
+def load_history_from_cloud(user_id, token):
+    """
+    Loads data using the User's Auth Token.
+    """
+    firebase = get_firebase()
+    if not firebase: return []
+    
+    db = firebase.database()
     try:
-        data = db.child("users").child(user_id).child("history").get().val()
-        if not data: return []
+        # Pass the token to read private data!
+        history = db.child("users").child(user_id).child("history").get(token=token).val()
+        
+        if not history: return []
             
-        if isinstance(data, dict):
-            return list(data.values())
-        elif isinstance(data, list):
-            return [x for x in data if x is not None]
-        return []
-    except:
+        # Handle List vs Dict format
+        if isinstance(history, dict):
+            return list(history.val().values()) # Pyrebase sometimes returns val() wrapper
+        if isinstance(history, list):
+            return [x for x in history if x is not None]
+            
+        # Direct dictionary values
+        return list(history.values())
+    except Exception as e:
+        print(f"Load Error: {e}")
         return []
