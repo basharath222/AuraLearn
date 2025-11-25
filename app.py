@@ -308,7 +308,7 @@ def main_app():
             
             # === FIX: STOP PREVIOUS AUDIO ===
             # This line wipes the explanation audio so it doesn't overlap
-            st.session_state.chat_audio_path = None 
+            # st.session_state.chat_audio_path = None 
             
             if mood == "confused":
                 with st.spinner("🧠 Teacher is simplifying..."):
