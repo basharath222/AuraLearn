@@ -2,19 +2,21 @@ import pdfplumber
 import PyPDF2
 import pandas as pd
 import docx
-from pptx import Presentation # NEW LIBRARY
+from pptx import Presentation
 import io
 
 def extract_text_from_pdf(uploaded_file):
     """
-    Extracts text from various file types (PDF, DOCX, PPTX, TXT, CSV, XLSX, XML).
-    Includes robust fallback for PDFs using pdfplumber and PyPDF2.
+    Extracts text based on file extension (PDF, DOCX, PPTX, CSV, XLSX, XML, TXT).
+    Uses file extensions instead of MIME types for better reliability.
     """
     text = ""
+    # Convert filename to lowercase to handle .PDF or .pdf
+    filename = uploaded_file.name.lower()
 
     try:
         # 1. Handle PDF
-        if uploaded_file.type == "application/pdf":
+        if filename.endswith(".pdf"):
             # Try with pdfplumber first
             try:
                 with pdfplumber.open(uploaded_file) as pdf:
@@ -39,16 +41,16 @@ def extract_text_from_pdf(uploaded_file):
             
             return text.strip() if text.strip() else "⚠️ PDF scanned or empty."
 
-        # 2. Handle DOCX (Word)
-        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        # 2. Handle Word (.docx)
+        elif filename.endswith(".docx"):
             doc = docx.Document(uploaded_file)
             fullText = []
             for para in doc.paragraphs:
                 fullText.append(para.text)
             return '\n'.join(fullText)
 
-        # 3. Handle PPTX (PowerPoint) - NEW!
-        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+        # 3. Handle PowerPoint (.pptx)
+        elif filename.endswith(".pptx"):
             prs = Presentation(uploaded_file)
             text_runs = []
             for slide in prs.slides:
@@ -57,28 +59,28 @@ def extract_text_from_pdf(uploaded_file):
                         text_runs.append(shape.text)
             return "\n".join(text_runs)
 
-        # 4. Handle Text / Markdown
-        elif uploaded_file.type in ["text/plain", "text/markdown"]:
+        # 4. Handle Text / Markdown (.txt, .md)
+        elif filename.endswith(".txt") or filename.endswith(".md"):
             return uploaded_file.read().decode("utf-8")
 
-        # 5. Handle CSV
-        elif uploaded_file.type == "text/csv":
+        # 5. Handle CSV (.csv)
+        elif filename.endswith(".csv"):
             uploaded_file.seek(0)
             df = pd.read_csv(uploaded_file)
             return df.to_string()
 
-        # 6. Handle Excel
-        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        # 6. Handle Excel (.xlsx, .xls)
+        elif filename.endswith(".xlsx") or filename.endswith(".xls"):
             uploaded_file.seek(0)
             df = pd.read_excel(uploaded_file)
             return df.to_string()
         
-        # 7. Handle XML
-        elif uploaded_file.type in ["text/xml", "application/xml"]:
+        # 7. Handle XML (.xml)
+        elif filename.endswith(".xml"):
             return uploaded_file.read().decode("utf-8")
 
         else:
-            return f"⚠️ Unsupported file type: {uploaded_file.type}. Please upload PDF, DOCX, PPTX, TXT, CSV, or Excel."
+            return f"⚠️ Unsupported file type: {filename}. Please upload PDF, DOCX, PPTX, TXT, CSV, or Excel."
 
     except Exception as e:
         return f"⚠️ Error processing file: {str(e)}"
