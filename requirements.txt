@@ -10,4 +10,5 @@ gTTS
 streamlit-mic-recorder
 setuptools
 python-docx
+python-pptx
 openpyxl
