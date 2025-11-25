@@ -204,31 +204,30 @@ def auth_screen():
                 submit = st.form_submit_button("Sign In")
                 
                 if submit:
+                    # 1. Attempt Login
+                    user_obj = None
+                    error_msg = None
+                    
                     try:
-                        # 1. Auth Check
-                        user = auth.sign_in_with_email_and_password(email, password)
-                        st.session_state.user = user
-                        
-                        # 2. Username Check (WITH TOKEN!)
+                        user_obj = auth.sign_in_with_email_and_password(email, password)
+                    except Exception as e:
+                        error_msg = "Login failed. Please check your credentials."
+
+                    # 2. Handle Result (OUTSIDE try/except to allow rerun)
+                    if user_obj:
+                        st.session_state.user = user_obj
                         try:
-                            uid = user['localId']
-                            token = user['idToken'] # <--- Get Token
-                            
-                            # Pass token to read protected DB
-                            profile = db.child("users").child(uid).child("profile").get(token=token).val()
-                            
-                            if profile and 'username' in profile:
-                                st.session_state.username_display = profile['username']
-                            else:
-                                st.session_state.username_display = email.split('@')[0]
+                            uid = user_obj['localId']
+                            profile = db.child("users").child(uid).child("profile").get().val()
+                            st.session_state.username_display = profile['username'] if profile else email.split('@')[0]
                         except:
                             st.session_state.username_display = email.split('@')[0]
-
+                        
                         st.success("Welcome back!")
                         time.sleep(0.5)
                         st.rerun()
-                    except: 
-                        st.error("Login failed. Check credentials.")
+                    else:
+                        st.error(error_msg)
         
         # REGISTER
         with tab2:
