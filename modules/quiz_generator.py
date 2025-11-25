@@ -27,7 +27,7 @@ def generate_quiz(context_text: str, num_questions=5, difficulty="Medium"):
     """
     
     messages = [{"role": "user", "content": prompt}]
-    response = _chat(messages, temperature=0.3)
+    response = _chat(messages, temperature=0.3, max_tokens=4096)
     
     # Clean up markdown if present
     clean_response = re.sub(r'```json|```', '', response).strip()
@@ -36,4 +36,5 @@ def generate_quiz(context_text: str, num_questions=5, difficulty="Medium"):
         quiz_data = json.loads(clean_response)
         return quiz_data
     except json.JSONDecodeError:
+        print("JSON Error. Raw response:", response[:100])
         return []
