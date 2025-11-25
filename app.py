@@ -229,7 +229,8 @@ def auth_screen():
                     else:
                         st.error(error_msg)
         
-        # REGISTER
+        
+        # --- REGISTER ---
         with tab2:
             with st.form("signup"):
                 new_username = st.text_input("Username (for Profile)")
@@ -243,11 +244,21 @@ def auth_screen():
                     elif not new_username: st.error("Username is required.")
                     else:
                         try:
+                            # 1. Create User
                             user = auth.create_user_with_email_and_password(new_email, new_pass)
                             uid = user['localId']
-                            db.child("users").child(uid).child("profile").set({"username": new_username})
+                            token = user['idToken'] # <--- GRAB THE TOKEN HERE
+                            
+                            # 2. Save Profile WITH Token
+                            db.child("users").child(uid).child("profile").set({"username": new_username}, token=token)
+                            
                             st.success("Account created! Please login.")
-                        except Exception as e: st.error(f"Error: {e}")
+                        except Exception as e: 
+                            # Clean error message
+                            if "EMAIL_EXISTS" in str(e):
+                                st.error("Email already exists.")
+                            else:
+                                st.error(f"Error: {e}")
 
         # FORGOT PASSWORD
         with tab3:
